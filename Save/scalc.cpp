@@ -64,6 +64,9 @@ Constants:
 #pragma warn -8004
 #pragma warn -8080
 #pragma warn -8071
+#pragma warn -8060
+
+#define _IGNORE_SPACE_
 
 static int_t To_int(int_t val)
 {
@@ -165,7 +168,7 @@ static int_t Now(int_t n)
   //return (int_t)mktime(timeinfo);
   return (int_t)time(NULL)+n*60*60;
 }
-        
+
 float_t Erf(float_t x)
 {
  // constants
@@ -192,10 +195,6 @@ float_t Erfc(float_t x)
  return 1-Erf(x);
 }
 
-float_t Random(float_t x)
-{
- return rand()*x/RAND_MAX;
-}
 
 static float_t Atan(float_t x)
 {
@@ -1054,7 +1053,6 @@ calculator::calculator(int cfg)
   sres[0] = '\0';
   memset(hash_table, 0, sizeof hash_table);
   memset(v_stack, 0, sizeof v_stack);
-  randomize();
 
   add(tsFFUNC1, "abs", (void*)(float_t(*)(float_t))fabsl);
   add(tsFFUNC1, "erf", (void*)(float_t(*)(float_t))Erf);
@@ -1128,7 +1126,6 @@ calculator::calculator(int cfg)
   add(tsFFUNC1, "sawg", (void*)(float_t(*)(float_t))SAwg);
   add(tsFFUNC1, "aawg", (void*)(float_t(*)(float_t))Aawg);
   add(tsFFUNC1, "cs", (void*)(float_t(*)(float_t))Cs);
-  add(tsFFUNC1, "rnd", (void*)(float_t(*)(float_t))Random);
 
   add(tsFFUNC2, "ee", (void*)(float_t(*)(float_t,float_t))Ee);
 
@@ -1303,6 +1300,9 @@ int calculator::hscanf(char* str, int_t &ival, int &nn)
  int n = 0;
  while (c = *str++, c && (n < 16))
   {
+   #ifdef _IGNORE_SPACE_
+   if (c == ' ') continue;
+   #endif 
    if ((c >= '0') && (c <= '9')) {res = res * 16 + (c - '0'); n++;}
    else
    if ((c >= 'A') && (c <= 'F')) {res = res * 16 + (c - 'A') + 0xA; n++;}
@@ -1321,14 +1321,24 @@ int calculator::bscanf(char* str, int_t &ival, int &nn)
  int_t res = 0;
  char c;
  int n = 0;
-
+ #ifdef _IGNORE_SPACE_
+ int i = 0;
+ #endif
  while (c = *str++, c && (n < 64))
   {
+   #ifdef _IGNORE_SPACE_
+   i++;
+   if (c == ' ') continue;
+   #endif
    if ((c >= '0') && (c <= '1')) {res = res * 2 + (c - '0'); n++;}
    else break;
   }
  ival = res;
+ #ifdef _IGNORE_SPACE_
+ nn = i;
+ #else
  nn = n;
+ #endif
  if (n) scfg |= fBIN;
  return 0;
 }
@@ -1338,14 +1348,25 @@ int calculator::oscanf(char* str, int_t &ival, int &nn)
  int_t res = 0;
  char c;
  int n = 0;
+ #ifdef _IGNORE_SPACE_
+ int i = 0;
+ #endif
 
  while (c = *str++, c && (n < 24))
   {
+   #ifdef _IGNORE_SPACE_
+   i++;
+   if (c == ' ') continue;
+   #endif
    if ((c >= '0') && (c <= '7')) {res = res * 8 + (c - '0'); n++;}
    else break;
   }
  ival = res;
+ #ifdef _IGNORE_SPACE_
+ nn = i;
+ #else
  nn = n;
+ #endif
  if (n) scfg |= OCT;
  return 0;
 }
@@ -1357,6 +1378,9 @@ int calculator::xscanf(char* str, int len, int_t &ival, int &nn)
  int n=0;
  int hmax, omax;
  int max;
+ #ifdef _IGNORE_SPACE_
+ int i = 0;
+ #endif
 
  switch (len)
   {
@@ -1378,6 +1402,10 @@ int calculator::xscanf(char* str, int len, int_t &ival, int &nn)
      {
       while (c = *str++, c && (n < omax))
       {
+       #ifdef _IGNORE_SPACE_
+       i++;
+       if (c == ' ') continue;
+       #endif
        if ((c >= '0') && (c <= '7')) {res = res * 8 + (c - '0'); n++;}
        else break;
       }
@@ -1391,6 +1419,10 @@ int calculator::xscanf(char* str, int len, int_t &ival, int &nn)
      str++; n++;
      while (c = *str++, c && (res < max) && (n < hmax))
       {
+       #ifdef _IGNORE_SPACE_
+       i++;
+       if (c == ' ') continue;
+       #endif
        if ((c >= '0') && (c <= '9')) {res = res * 16 + (c - '0'); n++;}
        else
        if ((c >= 'A') && (c <= 'F')) {res = res * 16 + (c - 'A') + 0xA; n++;}
@@ -1448,7 +1480,11 @@ int calculator::xscanf(char* str, int len, int_t &ival, int &nn)
     break;
   }
  ival = res;
+ #ifdef _IGNORE_SPACE_
+ nn = i;
+ #else
  nn = n;
+ #endif
  return 0;
 }
 
@@ -1511,6 +1547,198 @@ float_t calculator::tstrtod(char *s, char **endptr)
  *endptr = end;
  return res;
 }
+
+//---------------------------------------------------------------------------
+//string to double
+float_t str2de(char *str, char **stop)
+{
+ float_t d = 0;
+ float_t m = 0.1;
+ int fract = 0;
+ int i=0;
+ char c;
+ int sign;
+ while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+ if (str[i] == '-') {sign = -1; i++;}
+ else
+ if (str[i] == '+') {sign = 1; i++;}
+ else sign = 1;
+ for(;(c = str[i]); i++)
+  {
+   #ifdef _IGNORE_SPACE_
+   if (c == ' ') continue;
+   #endif 
+   if ((c == 'e')||(c == 'E'))
+    {
+     int e = 0;
+     int esign;
+     i++;
+     while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+     if (str[i] == '-') {esign = -1; i++;}
+     else
+     if (str[i] == '+') {esign = 1; i++;}
+     else esign = 1;
+     for(;(c = str[i]); i++)
+      {
+       #ifdef _IGNORE_SPACE_ 
+       if (c == ' ') continue;
+       #endif 
+       if (c >= '0' && c <= '9') e = e*10 + (c - '0');
+       else break;
+      }
+     e *= esign;
+     if (e > 0) while(e--) d*=10.0;
+     else
+     if (e < 0) while(e++) d*=0.1;
+     break;
+    }
+   if (c >= '0' && c <= '9')
+    {
+     if (!fract) d = d*10.0 + (c - '0');
+     else
+      {
+       d = d+(c - '0')*m;
+       m /= 10.0;
+      }
+    }
+   else
+   if (c == '.') fract = 1;
+   else break;
+  }
+ if (stop) *stop = &str[i];
+ return sign*d;
+}
+//---------------------------------------------------------------------------
+//string to int
+int_t str2i(const char *str, const char **stop)
+{
+ enum {tDec, tOct, tHex, tBin} t = tDec; //data type
+ int_t d = 0;
+ int i = 0;
+ char c;
+ int sign;
+ while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+ if (str[i] == '-') {sign = -1; i++;}
+ else
+ if (str[i] == '+') {sign = 1; i++;}
+ else sign = 1;
+ while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+ if ((str[i] == '0') && (c = str[i+1])) //oct, hex, bin
+  {
+   i++;
+   if (c >= '0' && c <= '7') t = tOct;
+   else
+   if (c == 'O'||c == 'o') {t = tOct; i++;}
+   else
+   if (c == 'X'||c == 'x') {t = tHex; i++;}
+   else
+   if (c == 'B'||c == 'b') {t = tBin; i++;}
+   else t = tDec;
+  }
+ while((c = str[i]))
+  {
+   #ifdef _IGNORE_SPACE_
+   if (c == ' ') continue;
+   #endif 
+   if (t == tDec)
+    {
+     if (c >= '0' && c <= '9') d = d*10 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tOct)
+    {
+     if (c >= '0' && c <= '7') d = d*8 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tBin)
+    {
+     if (c >= '0' && c <= '1') d = d*2 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tHex)
+    {
+     if (c >= '0' && c <= '9') d = d*16 + (c - '0');
+     else
+     if (c >= 'A' && c <= 'F') d = d*16 + (c - 'A'+10);
+     else
+     if (c >= 'a' && c <= 'f') d = d*16 + (c - 'a'+10);
+     else break;
+    }
+   i++;
+  }
+ if (stop) *stop = &str[i];
+ return sign*d;
+}
+//---------------------------------------------------------------------------
+//string to int
+int calculator::iscanf(char* str, int_t &ival, int &nn)
+{
+ enum {tDec, tOct, tHex, tBin} t = tDec; //data type
+ int_t d = 0;
+ int i = 0;
+ char c;
+ int sign;
+ while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+ if (str[i] == '-') {sign = -1; i++;}
+ else
+ if (str[i] == '+') {sign = 1; i++;}
+ else sign = 1;
+ while (str[i] && (str[i] == ' ')) i++; //skip lead spaces
+ if ((str[i] == '0') && (c = str[i+1])) //oct, hex, bin
+  {
+   i++;
+   if (c >= '0' && c <= '7') t = tOct;
+   else
+   if (c == 'O'||c == 'o') {t = tOct; i++;}
+   else
+   if (c == 'X'||c == 'x') {t = tHex; i++;}
+   else
+   if (c == 'B'||c == 'b') {t = tBin; i++;}
+   else t = tDec;
+  }
+ while((c = str[i]))
+  {
+   #ifdef _IGNORE_SPACE_   
+   i++;
+   if (c == ' ') continue;
+   #endif
+   if (t == tDec)
+    {
+     if (c >= '0' && c <= '9') d = d*10 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tOct)
+    {
+     if (c >= '0' && c <= '7') d = d*8 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tBin)
+    {
+     if (c >= '0' && c <= '1') d = d*2 + (c - '0');
+     else break;
+    }
+   else
+   if (t == tHex)
+    {
+     if (c >= '0' && c <= '9') d = d*16 + (c - '0');
+     else
+     if (c >= 'A' && c <= 'F') d = d*16 + (c - 'A'+10);
+     else
+     if (c >= 'a' && c <= 'f') d = d*16 + (c - 'a'+10);
+     else break;
+    }
+   //i++;
+  }
+ nn = i;
+ ival = sign*d;
+ return 0;
+}
+//---------------------------------------------------------------------------
 
 // http://searchstorage.techtarget.com/sDefinition/0,,sid5_gci499008,00.html
 // process expression like 1k56 => 1.56k (maximum 3 digits)
@@ -2106,11 +2334,17 @@ t_operator calculator::scan(bool operand)
         ipos = buf+pos+n;
        }
       else
-      if (buf[pos-1] == '0')         
-       {
+      if (buf[pos-1] == '0')
+       {                           
+        #ifdef _IGNORE_SPACE_
+        ierr = iscanf(buf+pos+1, ival, n);
+        ipos = buf+pos+n+1;
+        if ((ierr==0)&&((buf[pos] == 'x')||(buf[pos] == 'X'))) scfg |= HEX;
+        #else
         ierr = sscanf(buf+pos-1, "%" INT_FORMAT "i%n", &ival, &n) != 1;
         ipos = buf+pos-1+n;
         if ((ierr==0)&&((buf[pos] == 'x')||(buf[pos] == 'X'))) scfg |= HEX;
+        #endif
        }
       else
        {
@@ -2119,7 +2353,8 @@ t_operator calculator::scan(bool operand)
         ipos = buf+pos-1+n;
        }
       errno = 0;
-      fval = strtod(buf+pos-1, &fpos);
+      //fval = strtod(buf+pos-1, &fpos);
+      fval = str2de(buf+pos-1, &fpos);
 
       if ((*fpos == 34) || (*fpos == 39) || (*fpos == 96))//',",`
         fval = dstrtod(buf+pos-1, &fpos);
@@ -2262,7 +2497,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
 
 //  _clearfp();
 //  _controlfp(0, -1);
-//  _control87(MCW_EM, MCW_EM);
+//  _control87(MCW_EM, MCW_EM);   
   memset(sres, 0, STRBUF);
   while (true)
     {
@@ -2272,7 +2507,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
       if (oper == toERROR)
         {
           return qnan;
-        }
+        }                          
       if (!operand)
         {
           if (!BINARY(oper) && oper != toEND && oper != toPOSTINC
