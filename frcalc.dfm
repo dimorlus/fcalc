@@ -161,6 +161,10 @@ object CalcForm: TCalcForm
           Caption = 'Strin&g'
           OnClick = StringClick
         end
+        object Inch: TMenuItem
+          Caption = 'Inch'
+          OnClick = InchClick
+        end
         object All: TMenuItem
           Caption = '&All'
           OnClick = AllClick

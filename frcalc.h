@@ -52,6 +52,7 @@ __published:	// IDE-managed Components
         TMenuItem *Opacity;
         TMenuItem *Unixtime;
         TMenuItem *Fraction;
+        TMenuItem *Inch;
         void __fastcall CBStrChange(TObject *Sender);
         void __fastcall FormCreate(TObject *Sender);
         void __fastcall FormDestroy(TObject *Sender);
@@ -95,6 +96,7 @@ __published:	// IDE-managed Components
           TShiftState Shift);
         void __fastcall UnixtimeClick(TObject *Sender);
         void __fastcall FractionClick(TObject *Sender);
+        void __fastcall InchClick(TObject *Sender);
         //void __fastcall StringClick(TObject *Sender);
 private:	// User declarations
         calculator *ccalc;

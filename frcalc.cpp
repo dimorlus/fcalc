@@ -179,6 +179,30 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
      if (denum) sprintf(strings[n++], "%65.64s F", frcstr);
     }
 
+   if (Options & FRI)
+    {
+     char frcstr[80];
+     int num, denum;
+     double val;
+     if (fVal > 0) val = fVal;
+     else val = -fVal;
+     val /= 25.4e-3;
+     double intpart = floor(val);
+     if (intpart > 0)
+      {
+       fraction(val-intpart, 0.001, num, denum);
+       if (fVal > 0) sprintf(frcstr, "%.0f+%d/%d", intpart, num, denum);
+       else sprintf(frcstr, "-%.0f-%d/%d", intpart, num, denum);
+      }
+     else
+      {
+       fraction(val, 0.001, num, denum);
+       if (fVal > 0) sprintf(frcstr, "%d/%d", num, denum);
+       else sprintf(frcstr, "-%d/%d", num, denum);
+      }
+     if (denum) sprintf(strings[n++], "%65.64s \"", frcstr);
+    }
+
    if ((Options & HEX)||(scfg & HEX))
     {
      char binfstr[16];
@@ -505,7 +529,7 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
        Top = 200;
        Left = 200;
        Casesensitive->Checked = false;
-       Options = FFLOAT+SCF+NRM+CMP+IGR+UNS+HEX+CHR+WCH+OCT+fBIN+DAT+DEG+STR+ALL+MNU+FRC;
+       Options = FFLOAT+SCF+NRM+CMP+IGR+UNS+HEX+CHR+WCH+OCT+fBIN+DAT+DEG+STR+ALL+MNU+FRC+FRI;
        opacity = 255;
        binwide = 64;
       }
@@ -894,6 +918,19 @@ void __fastcall TCalcForm::FractionClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+void __fastcall TCalcForm::InchClick(TObject *Sender)
+{
+ Inch->Checked ^= 1;
+ if (Inch->Checked) Options |= FRI;
+ else Options &= ~FRI;
+
+ All->Checked = false;
+ Options &= ~ALL;
+
+ CBStrChange(Sender);
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TCalcForm::AllClick(TObject *Sender)
 {
  All->Checked ^= 1;
@@ -915,6 +952,7 @@ void __fastcall TCalcForm::AllClick(TObject *Sender)
  Degrees->Checked = All->Checked;
  String->Checked = All->Checked;
  Fraction->Checked = All->Checked;
+ Inch->Checked = All->Checked;
 
  if (Escmin->Checked) Options |= MIN;
  else Options &= ~MIN;
@@ -950,6 +988,8 @@ void __fastcall TCalcForm::AllClick(TObject *Sender)
  else Options &= ~STR;
  if (Fraction->Checked) Options |= FRC;
  else Options &= ~FRC;
+ if (Inch->Checked) Options |= FRI;
+ else Options &= ~FRI;
 
  CBStrChange(Sender);
 }
@@ -1030,6 +1070,7 @@ void __fastcall TCalcForm::Opt2Mnu(void)
  WChar->Checked = Options & WCH;
  String->Checked = Options & STR;
  Fraction->Checked = Options & FRC;
+ Inch->Checked = Options & FRI;
  if (Options & MNU)
   {
    CalcForm->MnCalc->Visible = true;

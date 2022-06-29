@@ -1540,6 +1540,11 @@ void calculator::scientific(char * &fpos, float_t &fval)
   if (*(fpos-1) == 'E') fpos--;
   switch (*fpos)
     {
+     case 'I':
+     case 'i':
+      fpos++;
+      fval *= 25.4e-3;
+     break;
      case 'Y':
        fpos++;
        if (*fpos == 'B')
