@@ -1459,7 +1459,7 @@ int calculator::xscanf(char* str, int len, int_t &ival, int &nn)
 
 float_t calculator::dstrtod(char *s, char **endptr)
 {
- const char cdeg[] = {96, 39, 34}; //` - degrees, ' - minutes, " - seconds
+ const char cdeg[] = {'\`', '\'', '\"'}; //` - degrees, ' - minutes, " - seconds
  const float_t mdeg[] = {M_PI/180.0, M_PI/(180.0*60), M_PI/(180.0*60*60)};
  float_t res = 0;
  float_t d;
@@ -1542,8 +1542,10 @@ void calculator::scientific(char * &fpos, float_t &fval)
     {
      case 'I':
      case 'i':
+     case '\"':
       fpos++;
       fval *= 25.4e-3;
+      scfg |= FRI;
      break;
      case 'Y':
        fpos++;
@@ -2132,12 +2134,6 @@ t_operator calculator::scan(bool operand)
         ipos = buf+pos+n+1;
        }
       else
-//      if (buf[pos-1] == '#')
-//       {
-//        ierr = hscanf(buf+pos, ival, n);
-//        ipos = buf+pos+n;
-//       }
-//      else
       if (buf[pos-1] == '$')
        {
         ierr = hscanf(buf+pos, ival, n);
@@ -2159,7 +2155,9 @@ t_operator calculator::scan(bool operand)
       errno = 0;
       fval = strtod(buf+pos-1, &fpos);
 
-      if ((*fpos == 34) || (*fpos == 39) || (*fpos == 96))//',",`
+      //` - degrees, ' - minutes, " - seconds
+      //if ((*fpos == '\'') || (*fpos == '\`') || (*fpos == '\"'))
+      if ((*fpos == '\'') || (*fpos == '\`'))
         fval = dstrtod(buf+pos-1, &fpos);
       else
       if (*fpos == ':') fval = tstrtod(buf+pos-1, &fpos);

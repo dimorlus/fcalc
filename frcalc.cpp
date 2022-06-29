@@ -191,8 +191,15 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
      if (intpart > 0)
       {
        fraction(val-intpart, 0.001, num, denum);
-       if (fVal > 0) sprintf(frcstr, "%.0f+%d/%d", intpart, num, denum);
-       else sprintf(frcstr, "-%.0f-%d/%d", intpart, num, denum);
+       if (num&&denum)
+        {
+         if (fVal > 0) sprintf(frcstr, "%.0f+%d/%d", intpart, num, denum);
+         else sprintf(frcstr, "-%.0f-%d/%d", intpart, num, denum);
+        }
+       else
+        {
+         sprintf(frcstr, "%.0f", intpart);
+        }
       }
      else
       {
@@ -200,7 +207,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
        if (fVal > 0) sprintf(frcstr, "%d/%d", num, denum);
        else sprintf(frcstr, "-%d/%d", num, denum);
       }
-     if (denum) sprintf(strings[n++], "%65.64s \"", frcstr);
+     sprintf(strings[n++], "%65.64s \"", frcstr);
     }
 
    if ((Options & HEX)||(scfg & HEX))
