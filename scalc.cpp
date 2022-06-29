@@ -660,69 +660,73 @@ double E192[] = {1.00, 1.01, 1.02, 1.04, 1.05, 1.06, 1.07, 1.09, 1.10, 1.11,
                  9.76, 9.88};
 static float_t Ee(float_t x, float_t y) //find standard value
 {
- int n;
- int N = x;
- double delta_n = 10;
- double delta_n1;
- double V = fabs(y);
-
- /* normalize */
- int ex= 0;
- while (V >= 1) {V /= 10; ex++;}
- while (V < 1)  {V *= 10; ex--;}
-
- if (N <= 192)
+ if (y)
   {
-   int nn = log10(V)*N+0.5;
-   switch(N)
+   int n;
+   int N = x;
+   double delta_n = 10;
+   double delta_n1;
+   double V = fabs(y);
+
+   /* normalize */
+   int ex= 0;
+   while (V >= 1) {V /= 10; ex++;}
+   while (V < 1)  {V *= 10; ex--;}
+
+   if (N <= 192)
     {
-     case 3:
-      V = E3[nn];
-     break;
-     case 6:
-      V = E6[nn];
-     break;
-     case 12:
-      V = E12[nn];
-     break;
-     case 24:
-      V = E24[nn];
-     break;
-     case 48:
-      V = E48[nn];
-     break;
-     case 96:
-      V = E96[nn];
-     break;
-     case 192:
-      V = E192[nn];
-     break;
-     default:
-      V = 0.0/0.0;
-     break;
-    }
-  }
- else
-  {
-   for(n = 0; n < N; n++)
-    {
-     double v = exp(log(10.0)*n/N);
-     delta_n1 = fabs(V-v);
-     if (delta_n1 > delta_n)
+     int nn = log10(V)*N+0.5;
+     switch(N)
       {
+       case 3:
+        V = E3[nn];
+       break;
+       case 6:
+        V = E6[nn];
+       break;
+       case 12:
+        V = E12[nn];
+       break;
+       case 24:
+        V = E24[nn];
+       break;
+       case 48:
+        V = E48[nn];
+       break;
+       case 96:
+        V = E96[nn];
+       break;
+       case 192:
+        V = E192[nn];
+       break;
+       default:
+        V = 0.0/0.0;
        break;
       }
-     delta_n = delta_n1;
     }
-   V = (floor((0.5+exp(log(10.0)*(n)/N)*100)))/100;
-  }
- /* denormalize */
- while(ex)
-  if (ex > 0) {V *= 10.0; ex--;}
-  else {V /= 10.0; ex++;}
+   else
+    {
+     for(n = 0; n < N; n++)
+      {
+       double v = exp(log(10.0)*n/N);
+       delta_n1 = fabs(V-v);
+       if (delta_n1 > delta_n)
+        {
+         break;
+        }
+       delta_n = delta_n1;
+      }
+     V = (floor((0.5+exp(log(10.0)*(n)/N)*100)))/100;
+    }
+   /* denormalize */
+   while(ex)
+    if (ex > 0) {V *= 10.0; ex--;}
+    else {V /= 10.0; ex++;}
 
- if (y < 0) return -V;
- else return V;
+   if (y < 0) return -V;
+   else return V;
+ }
+ else return 0;
 }
 
 static float_t Max(float_t x, float_t y)
@@ -1897,12 +1901,35 @@ t_operator calculator::scan(bool operand)
         return toXOR;
        }
     case '#':
-      if (buf[pos] == '=')
+     if (operand)
+      {
+       float_t fval;
+       char *fpos;
+       if (buf[pos])
         {
-          pos += 1;
-          return toSETXOR;
+         fval = Awg(strtod(buf+pos, &fpos));
+         v_stack[v_sp].tag = tvFLOAT;
+         v_stack[v_sp].fval = fval;
+         pos = fpos - buf;
+         v_stack[v_sp].pos = pos;
+         v_stack[v_sp++].var = NULL;
+         return toOPERAND;
         }
-      return toXOR;
+       else
+        {
+         error("bad numeric constant");
+         return toERROR;
+        }
+      }
+     else
+      {
+       if (buf[pos] == '=')
+         {
+           pos += 1;
+           return toSETXOR;
+         }
+       return toXOR;
+      }
     case ',':
       return toCOMMA;
     case '\'':
@@ -2100,13 +2127,19 @@ t_operator calculator::scan(bool operand)
         ipos = buf+pos+n+1;
        }
       else
+//      if (buf[pos-1] == '#')
+//       {
+//        ierr = hscanf(buf+pos, ival, n);
+//        ipos = buf+pos+n;
+//       }
+//      else
       if (buf[pos-1] == '$')
        {
         ierr = hscanf(buf+pos, ival, n);
         ipos = buf+pos+n;
        }
       else
-      if (buf[pos-1] == '0')         
+      if (buf[pos-1] == '0')
        {
         ierr = sscanf(buf+pos-1, "%" INT_FORMAT "i%n", &ival, &n) != 1;
         ipos = buf+pos-1+n;

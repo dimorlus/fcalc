@@ -11,20 +11,20 @@ File_8=SourceModule,'D:\tube\srtmpl.cpp',0,1,195,74,258,0,0
 File_9=SourceModule,'D:\tube\RegExpClass.cpp',0,1,1205,28,1221,0,0
 
 [Modules]
-Module0=D:\PCProjects\fcalc\RegExpCalc.cpp
-Module1=D:\PCProjects\fcalc\RegExpClass.cpp
+Module0=D:\PCProjects\fcalc\RegExpClass.cpp
+Module1=D:\PCProjects\fcalc\RegExpCalc.cpp
 Module2=D:\PCProjects\fcalc\scalc.cpp
 Count=3
 EditWindowCount=1
 
-[D:\PCProjects\fcalc\RegExpCalc.cpp]
+[D:\PCProjects\fcalc\RegExpClass.cpp]
 ModuleType=SourceModule
 FormState=0
 FormOnTop=0
 
-[D:\PCProjects\fcalc\RegExpClass.cpp]
+[D:\PCProjects\fcalc\RegExpCalc.cpp]
 ModuleType=SourceModule
-FormState=0
+FormState=1
 FormOnTop=0
 
 [D:\PCProjects\fcalc\scalc.cpp]
@@ -42,7 +42,7 @@ FormOnTop=0
 
 [EditWindow0]
 ViewCount=3
-CurrentView=0
+CurrentView=2
 View0=0
 View1=1
 View2=2
@@ -70,9 +70,9 @@ BottomPanelData=00000400010000000B0000004D65737361676556696577000000000000000000
 
 [View0]
 Module=D:\PCProjects\fcalc\RegExpCalc.cpp
-CursorX=62
-CursorY=384
-TopLine=376
+CursorX=38
+CursorY=506
+TopLine=500
 LeftCol=1
 
 [View1]
@@ -85,8 +85,8 @@ LeftCol=1
 [View2]
 Module=D:\PCProjects\fcalc\RegExpClass.cpp
 CursorX=1
-CursorY=1
-TopLine=1
+CursorY=1162
+TopLine=1177
 LeftCol=1
 
 [Watches]
@@ -94,9 +94,7 @@ Count=1
 Watch0='*(float*)arglist[2]',256,0,18,1,0,'Watches'
 
 [Breakpoints]
-Count=2
-Breakpoint0='D:\PCProjects\fcalc\RegExpCalc.cpp',428,'',0,1,'',1,0,0,'',1,'','',''
-Breakpoint1='D:\PCProjects\fcalc\RegExpCalc.cpp',349,'',0,1,'',1,0,0,'',1,'','',''
+Count=0
 
 [AddressBreakpoints]
 Count=0
@@ -226,7 +224,7 @@ LRDockWidth=190
 Dockable=1
 SplitPos=85
 ArrangeBy=Name
-SelectedItem=
+SelectedItem=Caption
 ExpandedItems=Anchors,BorderIcons
 HiddenCategories=
 
