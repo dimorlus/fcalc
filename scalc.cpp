@@ -1540,9 +1540,7 @@ void calculator::scientific(char * &fpos, float_t &fval)
   if (*(fpos-1) == 'E') fpos--;
   switch (*fpos)
     {
-     case 'I':
-     case 'i':
-     case '\"':
+     case '\"': //Inch
       fpos++;
       fval *= 25.4e-3;
       scfg |= FRI;
