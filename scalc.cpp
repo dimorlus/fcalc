@@ -1544,7 +1544,8 @@ void calculator::scientific(char * &fpos, float_t &fval)
       if (scfg & FRI)
        {
         fpos++;
-        fval *= 25.4e-3;
+        //fval *= 25.4e-3;
+        engineering(25.4e-3, fpos, fval);
        }
      break;
      case 'Y':
