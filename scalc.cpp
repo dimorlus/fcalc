@@ -165,7 +165,7 @@ static int_t Now(int_t n)
   //return (int_t)mktime(timeinfo);
   return (int_t)time(NULL)+n*60*60;
 }
-        
+
 float_t Erf(float_t x)
 {
  // constants
@@ -1541,9 +1541,11 @@ void calculator::scientific(char * &fpos, float_t &fval)
   switch (*fpos)
     {
      case '\"': //Inch
-      fpos++;
-      fval *= 25.4e-3;
-      scfg |= FRI;
+      if (scfg & FRI)
+       {
+        fpos++;
+        fval *= 25.4e-3;
+       }
      break;
      case 'Y':
        fpos++;
@@ -1740,7 +1742,7 @@ t_operator calculator::scan(bool operand)
           pos += 1;
           return toNE;
         }
-      return toNOT;
+      return operand ? toNOT : toFACT;
     case '~':
       return toCOM;
     case ';':
@@ -2154,13 +2156,12 @@ t_operator calculator::scan(bool operand)
       fval = strtod(buf+pos-1, &fpos);
 
       //` - degrees, ' - minutes, " - seconds
-      //if ((*fpos == '\'') || (*fpos == '\`') || (*fpos == '\"'))
-      if ((*fpos == '\'') || (*fpos == '\`'))
+      if ((*fpos == '\'') || (*fpos == '\`') || (((scfg & FRI)==0)&&(*fpos == '\"')))
         fval = dstrtod(buf+pos-1, &fpos);
       else
       if (*fpos == ':') fval = tstrtod(buf+pos-1, &fpos);
       else
-      if (scfg & SCI) scientific(fpos, fval);
+      if (scfg & SCI+FRI) scientific(fpos, fval);
 
       ferr = errno;
       if (ierr && ferr)
@@ -2221,7 +2222,7 @@ static int lpr[toTERMINALS] =
 {
   2, 0, 0, 0,       // BEGIN, OPERAND, ERROR, END,
   4, 4,             // LPAR, RPAR
-  5, 98, 98,        // FUNC, POSTINC, POSTDEC,
+  5, 98, 98, 98,   // FUNC, POSTINC, POSTDEC, FACT
   98, 98, 98, 98, 98, 98, // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
   90,               // POW,
   80, 80, 80, 80,   // MUL, DIV, MOD, PAR
@@ -2242,7 +2243,7 @@ static int rpr[toTERMINALS] =
 {
   0, 0, 0, 1,       // BEGIN, OPERAND, ERROR, END,
   110, 3,           // LPAR, RPAR
-  120, 99, 99,      // FUNC, POSTINC, POSTDEC
+  120, 99, 99, 99,  // FUNC, POSTINC, POSTDEC, FACT
   99, 99, 99, 99, 99, 99, // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
   95,               // POW,
   80, 80, 80, 80,   // MUL, DIV, MOD, PAR
@@ -2310,12 +2311,13 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
       if (!operand)
         {
           if (!BINARY(oper) && oper != toEND && oper != toPOSTINC
-              && oper != toPOSTDEC && oper != toRPAR)
+              && oper != toPOSTDEC && oper != toRPAR && oper != toFACT)
             {
               error(op_pos, "operator expected");
               return qnan;
             }
-          if (oper != toPOSTINC && oper != toPOSTDEC && oper != toRPAR)
+          if (oper != toPOSTINC && oper != toPOSTDEC && oper != toRPAR
+              && oper != toFACT)
             {
               operand = true;
             }
@@ -2334,6 +2336,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
               return qnan;
             }
         }
+      //int n_args = 1;
       int n_args = 1;
       while (lpr[o_stack[o_sp-1]] >= rpr[oper])
         {
@@ -3023,6 +3026,26 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               v_stack[v_sp-1].var = NULL;
               break;
+
+            case toFACT:
+              if ((v_stack[v_sp-1].tag == tvSTR) ||
+                  (v_stack[v_sp-2].tag == tvSTR))
+                {
+                  error(v_stack[v_sp-2].pos, "Illegal string operation");
+                  return qnan;
+                }
+              else
+              if (v_stack[v_sp-1].tag == tvINT)
+                {
+                  v_stack[v_sp-1].ival = (int_t)Factorial((float_t)v_stack[v_sp-1].ival);
+                }
+              else
+                {
+                  v_stack[v_sp-1].fval = (float_t)Factorial((float_t)v_stack[v_sp-1].fval);
+                }
+              v_stack[v_sp-1].var = NULL;
+              
+            break;
 
             case toSET:
               if ((v_sp < 2) || (v_stack[v_sp-2].var == NULL))

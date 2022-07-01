@@ -67,7 +67,7 @@ enum t_value
 enum t_operator
 {
   toBEGIN, toOPERAND, toERROR, toEND,
-  toLPAR, toRPAR, toFUNC, toPOSTINC, toPOSTDEC,
+  toLPAR, toRPAR, toFUNC, toPOSTINC, toPOSTDEC, toFACT,
   toPREINC, toPREDEC, toPLUS, toMINUS, toNOT, toCOM,
   toPOW,
   toMUL, toDIV, toMOD, toPAR,

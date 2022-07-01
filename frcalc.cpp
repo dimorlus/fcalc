@@ -630,8 +630,8 @@ void __fastcall TCalcForm::CasesensitiveClick(TObject *Sender)
 
 void __fastcall TCalcForm::SetOpt(bool forced)
 {
- int opt = ccalc->issyntax();
-
+ int opt = ccalc->issyntax()|(Options & (SCI+FRI));
+                                         
  if (forced)
   {
    if (Options & PAS) opt |= PAS;
@@ -653,7 +653,7 @@ void __fastcall TCalcForm::SetOpt(bool forced)
 
  Cstyle->Checked = true;
 
- ccalc->syntax(opt & (PAS+UPCASE+FFLOAT)|(SCI));
+ ccalc->syntax(opt & (PAS+UPCASE+FFLOAT+FRI)|(SCI));
 }
 //---------------------------------------------------------------------------
 
@@ -927,13 +927,21 @@ void __fastcall TCalcForm::FractionClick(TObject *Sender)
 
 void __fastcall TCalcForm::InchClick(TObject *Sender)
 {
+ int opt = ccalc->issyntax();
  Inch->Checked ^= 1;
- if (Inch->Checked) Options |= FRI;
- else Options &= ~FRI;
-
+ if (Inch->Checked)
+  {
+   Options |= FRI;
+   opt |= FRI;
+  }
+ else
+  {
+   Options &= ~FRI;
+   opt &= ~FRI;
+  }
  All->Checked = false;
  Options &= ~ALL;
-
+ ccalc->syntax(opt);
  CBStrChange(Sender);
 }
 //---------------------------------------------------------------------------
