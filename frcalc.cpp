@@ -1,4 +1,5 @@
 //---------------------------------------------------------------------------
+#pragma warn -8058
 #include <windows.h>
 #include <vcl.h>
 #include <string.h>

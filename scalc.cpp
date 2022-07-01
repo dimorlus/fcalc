@@ -2223,7 +2223,7 @@ static int lpr[toTERMINALS] =
 {
   2, 0, 0, 0,       // BEGIN, OPERAND, ERROR, END,
   4, 4,             // LPAR, RPAR
-  5, 98, 98, 98,   // FUNC, POSTINC, POSTDEC, FACT
+  5, 98, 98, 98,    // FUNC, POSTINC, POSTDEC, FACT
   98, 98, 98, 98, 98, 98, // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
   90,               // POW,
   80, 80, 80, 80,   // MUL, DIV, MOD, PAR
@@ -2264,17 +2264,17 @@ static int rpr[toTERMINALS] =
 
 bool calculator::assign()
 {
-  value& v = v_stack[v_sp-1];
-  if (v.var == NULL)
-    {
-      error(v.pos, "variable expected");
-      return false;
-    }
-  else
-    {
-      v.var->val = v;
-      return true;
-    }
+ value& v = v_stack[v_sp-1];
+ if (v.var == NULL)
+  {
+   error(v.pos, "variable expected");
+   return false;
+  }
+ else
+  {
+   v.var->val = v;
+   return true;
+  }
 }
 
 float_t calculator::evaluate(char* expression, __int64 * piVal)
@@ -2292,8 +2292,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
   const __int64 i64mindbl = 0x0010000000000001ui64;
   const double maxdbl = *(double*)&i64maxdbl;
   const double mindbl = *(double*)&i64mindbl;
-//  static const __int64 QNAN = -2251799813685248i64;
-//  const double qnan = *(double*)&QNAN;
   const float_t qnan = 0.0/0.0;
 
 //  _clearfp();
@@ -2306,37 +2304,37 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
       int op_pos = pos;
       int oper = scan(operand);
       if (oper == toERROR)
-        {
-          return qnan;
-        }
+       {
+        return qnan;
+       }
       if (!operand)
-        {
-          if (!BINARY(oper) && oper != toEND && oper != toPOSTINC
-              && oper != toPOSTDEC && oper != toRPAR && oper != toFACT)
-            {
-              error(op_pos, "operator expected");
-              return qnan;
-            }
-          if (oper != toPOSTINC && oper != toPOSTDEC && oper != toRPAR
-              && oper != toFACT)
-            {
-              operand = true;
-            }
-        }
+       {
+        if (!BINARY(oper) && oper != toEND && oper != toPOSTINC
+            && oper != toPOSTDEC && oper != toRPAR && oper != toFACT)
+         {
+          error(op_pos, "operator expected");
+          return qnan;
+         }
+        if (oper != toPOSTINC && oper != toPOSTDEC && oper != toRPAR
+            && oper != toFACT)
+         {
+          operand = true;
+         }
+       }
       else
-        {
-          if (oper == toOPERAND)
-            {
-              operand = false;
-              n_args += 1;
-              continue;
-            }
-          if (BINARY(oper) || oper == toRPAR)
-            {
-              error(op_pos, "operand expected");
-              return qnan;
-            }
-        }
+       {
+        if (oper == toOPERAND)
+         {
+          operand = false;
+          n_args += 1;
+          continue;
+         }
+        if (BINARY(oper) || oper == toRPAR)
+         {
+          error(op_pos, "operand expected");
+          return qnan;
+         }
+       }
       //int n_args = 1;
       int n_args = 1;
       while (lpr[o_stack[o_sp-1]] >= rpr[oper])
