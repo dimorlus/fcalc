@@ -4,7 +4,7 @@
 AppName=fcalc
 AppVerName=fcalc (Scientific formula calculator) 1.0 files
 VersionInfoVersion=1.0.0.0
-AppContact=http://www.metrolight.com
+AppContact=http://dorlov.no-ip.com
 DefaultDirName={pf}\fcalc
 DefaultGroupName=fcalc
 UninstallDisplayIcon={app}\fcalc.exe
