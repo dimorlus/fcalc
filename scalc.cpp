@@ -2336,7 +2336,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
          }
        }
       //int n_args = 1;
-      int n_args = 1;
+      n_args = 1;
       while (lpr[o_stack[o_sp-1]] >= rpr[oper])
         {
           int cop = o_stack[--o_sp];
