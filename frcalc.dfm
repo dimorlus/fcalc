@@ -169,6 +169,10 @@ object CalcForm: TCalcForm
           Caption = '&All'
           OnClick = AllClick
         end
+        object Auto: TMenuItem
+          Caption = 'Auto'
+          OnClick = AutoClick
+        end
       end
       object Binarywidth: TMenuItem
         Caption = 'Binary width'

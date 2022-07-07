@@ -612,6 +612,11 @@ static float_t Cs(float_t x) //diameter to mm^2
  return pow(x, 2)*M_PI/4.0;
 }
 
+static float_t Acs(float_t x) //mm^2 to diameter
+{
+ return sqrt(4.0*x/M_PI);
+}
+
 static float_t Aawg(float_t x) //mm to AWG
 {
  return (2.1104-log(x))/0.11594;
@@ -1132,6 +1137,7 @@ calculator::calculator(int cfg)
   add(tsFFUNC1, "sawg", (void*)(float_t(*)(float_t))SAwg);
   add(tsFFUNC1, "aawg", (void*)(float_t(*)(float_t))Aawg);
   add(tsFFUNC1, "cs", (void*)(float_t(*)(float_t))Cs);
+  add(tsFFUNC1, "acs", (void*)(float_t(*)(float_t))Acs);
   add(tsFFUNC1, "rnd", (void*)(float_t(*)(float_t))Random);
 
   add(tsFFUNC2, "ee", (void*)(float_t(*)(float_t,float_t))Ee);

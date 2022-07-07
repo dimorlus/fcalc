@@ -41,6 +41,7 @@
 #define UTM     (1<<23) // (RO) Unix time
 #define FRC     (1<<24) // (UI) Fraction output
 #define FRI     (1<<25) // (UI) Fraction inch output
+#define AUTO    (1<<26) // (UI) Auto output
 #define STRBUF  256     // bufer size for string operations
 
 #define _WCHAR_         // L'c' and 'c'W input format allow

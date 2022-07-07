@@ -11,20 +11,45 @@ File_8=SourceModule,'C:\Program Files (x86)\Borland\CBuilder6\Include\stl\_ostre
 File_9=SourceModule,'c:\program files (x86)\borland\cbuilder6\include\stl\_sstream.c',0,1,164,1,184,0,0
 
 [Modules]
-Module0=D:\PCProjects\fcalc\scalc.cpp
-Module1=D:\PCProjects\fcalc\ViewVars.cpp
-Module2=D:\PCProjects\fcalc\fcalc.bpr
-Module3=D:\PCProjects\fcalc\sfmts.cpp
-Module4=D:\PCProjects\fcalc\StrUtils.cpp
-Module5=D:\PCProjects\fcalc\frcalc.cpp
-Module6=c:\program files (x86)\borland\cbuilder6\include\time.h
-Module7=c:\program files (x86)\borland\cbuilder6\include\math.h
-Module8=c:\program files (x86)\borland\cbuilder6\include\stdlib.h
-Module9=c:\program files (x86)\borland\cbuilder6\include\ctype.h
+Module0=D:\PCProjects\fcalc\frcalc.cpp
+Module1=D:\PCProjects\fcalc\scalc.cpp
+Module2=c:\program files (x86)\borland\cbuilder6\include\time.h
+Module3=c:\program files (x86)\borland\cbuilder6\include\math.h
+Module4=c:\program files (x86)\borland\cbuilder6\include\stdlib.h
+Module5=c:\program files (x86)\borland\cbuilder6\include\ctype.h
+Module6=D:\PCProjects\fcalc\ViewVars.cpp
+Module7=D:\PCProjects\fcalc\fcalc.bpr
+Module8=D:\PCProjects\fcalc\sfmts.cpp
+Module9=D:\PCProjects\fcalc\StrUtils.cpp
 Count=10
 EditWindowCount=1
 
+[D:\PCProjects\fcalc\frcalc.cpp]
+ModuleType=SourceModule
+FormState=1
+FormOnTop=1
+
 [D:\PCProjects\fcalc\scalc.cpp]
+ModuleType=SourceModule
+FormState=0
+FormOnTop=0
+
+[c:\program files (x86)\borland\cbuilder6\include\time.h]
+ModuleType=SourceModule
+FormState=0
+FormOnTop=0
+
+[c:\program files (x86)\borland\cbuilder6\include\math.h]
+ModuleType=SourceModule
+FormState=0
+FormOnTop=0
+
+[c:\program files (x86)\borland\cbuilder6\include\stdlib.h]
+ModuleType=SourceModule
+FormState=0
+FormOnTop=0
+
+[c:\program files (x86)\borland\cbuilder6\include\ctype.h]
 ModuleType=SourceModule
 FormState=0
 FormOnTop=0
@@ -45,31 +70,6 @@ FormState=0
 FormOnTop=0
 
 [D:\PCProjects\fcalc\StrUtils.cpp]
-ModuleType=SourceModule
-FormState=0
-FormOnTop=0
-
-[D:\PCProjects\fcalc\frcalc.cpp]
-ModuleType=SourceModule
-FormState=1
-FormOnTop=0
-
-[c:\program files (x86)\borland\cbuilder6\include\time.h]
-ModuleType=SourceModule
-FormState=0
-FormOnTop=0
-
-[c:\program files (x86)\borland\cbuilder6\include\math.h]
-ModuleType=SourceModule
-FormState=0
-FormOnTop=0
-
-[c:\program files (x86)\borland\cbuilder6\include\stdlib.h]
-ModuleType=SourceModule
-FormState=0
-FormOnTop=0
-
-[c:\program files (x86)\borland\cbuilder6\include\ctype.h]
 ModuleType=SourceModule
 FormState=0
 FormOnTop=0
@@ -111,13 +111,13 @@ LeftPanelData=000004000000000000000000000000000000000000000000000100000000000000
 RightPanelSize=0
 BottomPanelSize=230
 BottomPanelClients=MessageView@EditWindow0,WatchWindow
-BottomPanelData=00000400010000000B0000004D657373616765566965774B0600000000000002E600000000000000010000000000000000000000000100000000800700000000000001000000014B060000000000000200000002E60000000000000003000000004B0600000B000000576174636857696E646F7703000000004A0600000000000003000000004A0600000000000003000000004B0600000000000003000000004A0600000000000003000000004A0600000000000003000000004B0600000000000003000000004A0600000000000003000000004B0600000000000003000000004B060000000000000200000000E6000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C3000000000000000200000000C3000000000000000200000000C2000000000000000200000000C3000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C3000000000000000200000000C2000000000000000200000000C300000000000000FFFFFFFF
+BottomPanelData=00000400010000000B0000004D657373616765566965774B0600000000000002E600000000000000010000000000000000000000000100000000800700000000000001000000014B060000000000000200000002E60000000000000003000000004B0600000B000000576174636857696E646F7703000000004A0600000000000003000000004A0600000000000003000000004A0600000000000003000000004B0600000000000003000000004A0600000000000003000000004A0600000000000003000000004B0600000000000003000000004A0600000000000003000000004B0600000000000003000000004B060000000000000200000000E6000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C3000000000000000200000000C3000000000000000200000000C2000000000000000200000000C3000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C2000000000000000200000000C3000000000000000200000000C2000000000000000200000000C300000000000000FFFFFFFF
 
 [View0]
 Module=D:\PCProjects\fcalc\frcalc.cpp
-CursorX=64
-CursorY=697
-TopLine=690
+CursorX=38
+CursorY=1039
+TopLine=1032
 LeftCol=1
 
 [View1]
@@ -150,9 +150,9 @@ LeftCol=1
 
 [View5]
 Module=D:\PCProjects\fcalc\scalc.cpp
-CursorX=7
-CursorY=2339
-TopLine=2321
+CursorX=54
+CursorY=1140
+TopLine=1126
 LeftCol=1
 
 [View6]
@@ -200,8 +200,8 @@ Left=0
 Top=0
 Width=1920
 Height=123
-MaxLeft=-1
-MaxTop=-1
+MaxLeft=-4
+MaxTop=-4
 MaxWidth=1928
 MaxHeight=123
 ClientWidth=1920
@@ -317,7 +317,7 @@ LRDockWidth=190
 Dockable=1
 SplitPos=129
 ArrangeBy=Name
-SelectedItem=OnKeyDown
+SelectedItem=Caption
 ExpandedItems=Anchors,BorderIcons
 HiddenCategories=
 

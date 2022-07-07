@@ -118,7 +118,21 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
        sprintf(strings[n++], "%66.66s ", "NaN");
      else
        sprintf(strings[n++], "%66.66s ", " ");
-     if ((Options & STR)||(scfg & STR))
+
+
+   // (RO) String format found
+   if ((Options & STR)||(scfg & STR))
+    {
+     if (Auto->Checked)
+      {
+       if (ccalc->Sres()[0])
+        {
+         char strcstr[80];
+         sprintf(strcstr, "'%s'", ccalc->Sres());
+         if (strcstr[0]) sprintf(strings[n++], "%65.64s", strcstr);
+        }
+      }
+     else
       {
        if (ccalc->Sres()[0])
         {
@@ -129,34 +143,58 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
        else sprintf(strings[n++], "%65.64s", "''");
       }
     }
+   }
   }
  else
   {
-   if (Options & FFLOAT)
-     sprintf(strings[n++], "%65.16Lg f", fVal);
+   // (WO) Forced float
+   if (Options & FFLOAT) sprintf(strings[n++], "%65.16Lg f", fVal);
+
+   // (RO) Scientific (6.8k) format found
    if ((Options & SCF)||(scfg & SCF))
     {
      char scistr[80];
      d2scistr(scistr, fVal);
      sprintf(strings[n++], "%65.64s S", scistr);
     }
+
+   // (UI) Normalized output
    if (Options & NRM)
     {
      char nrmstr[80];
      d2nrmstr(nrmstr, fVal);
      sprintf(strings[n++], "%65.64s n", nrmstr);
     }
+
+   // (RO) Computing format found
    if ((Options & CMP)||(scfg & CMP))
     {
      char bscistr[80];
      b2scistr(bscistr, fVal);
      sprintf(strings[n++], "%65.64s c", bscistr);
     }
-   if (Options & IGR)
-    sprintf(strings[n++], "%65Ld i", iVal);
-   if (Options & UNS)
-    sprintf(strings[n++], "%65Lu u", iVal);
 
+   // (UI) Integer output
+   if (Options & IGR)
+    {
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%65Ld i", iVal);
+      }
+     else sprintf(strings[n++], "%65Ld i", iVal);
+    }
+
+   // (UI) Unsigned output
+   if (Options & UNS)
+    {
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%65Lu u", iVal);
+      }
+     else sprintf(strings[n++], "%65Lu u", iVal);
+    }
+
+   // (UI) Fraction output
    if (Options & FRC)
     {
      char frcstr[80];
@@ -180,6 +218,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
      if (denum) sprintf(strings[n++], "%65.64s F", frcstr);
     }
 
+   // (UI) Fraction inch output
    if (Options & FRI)
     {
      char frcstr[80];
@@ -211,66 +250,124 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
      sprintf(strings[n++], "%65.64s \"", frcstr);
     }
 
+   // (RO) Hex format found
    if ((Options & HEX)||(scfg & HEX))
     {
      char binfstr[16];
      sprintf(binfstr, "%%64.%iLxh", binwide/4);
-     sprintf(strings[n++], binfstr, iVal);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], binfstr, iVal);
+      }
+     else sprintf(strings[n++], binfstr, iVal);
     }
+
+   // (RO) Octal format found
    if ((Options & OCT)||(scfg & OCT))
     {
      char binfstr[16];
      sprintf(binfstr, "%%64.%iLoo", binwide/3);
-     sprintf(strings[n++], binfstr, iVal);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], binfstr, iVal);
+      }
+     else sprintf(strings[n++], binfstr, iVal);
     }
+
+   // (RO) Binary format found
    if ((Options & fBIN)||(scfg & fBIN))
     {
      char binfstr[16];
      char binstr[80];
      sprintf(binfstr, "%%%ib", binwide);
      b2str(binstr, binfstr, iVal);
-     sprintf(strings[n++], "%64.64sb", binstr);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64sb", binstr);
+      }
+     else sprintf(strings[n++], "%64.64sb", binstr);
     }
+
+   // (RO) Char format found
    if ((Options & CHR)||(scfg & CHR))
     {
      char chrstr[80];
      chr2str(chrstr, iVal);
-     sprintf(strings[n++], "%64.64s  c", chrstr);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64s  c", chrstr);
+      }
+     else sprintf(strings[n++], "%64.64s  c", chrstr);
     }
+
+   // (RO) WChar format found
    if ((Options & WCH)||(scfg & WCH))
     {
      char wchrstr[80];
      wchr2str(wchrstr, iVal);
-     sprintf(strings[n++], "%64.64s  c", wchrstr);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64s  c", wchrstr);
+      }
+     else sprintf(strings[n++], "%64.64s  c", wchrstr);
     }
+
+   // (RO) Date time format found
    if ((Options & DAT)||(scfg & DAT))
     {
      char dtstr[80];
      t2str(dtstr, iVal);
-     sprintf(strings[n++], "%65.64s", dtstr);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%65.64s", dtstr);
+      }
+     else sprintf(strings[n++], "%65.64s", dtstr);
     }
+
+   // (RO) Unix time
    if ((Options & UTM)||(scfg & UTM))
     {
      char dtstr[80];
      nx_time2str(dtstr, iVal);
-     sprintf(strings[n++], "%65.64s", dtstr);
+     if (Auto->Checked)
+      {
+       if ((fVal-iVal)==0) sprintf(strings[n++], "%65.64s", dtstr);
+      }
+     else sprintf(strings[n++], "%65.64s", dtstr);
     }
+
+   // (RO) Degrees format found
    if ((Options & DEG)||(scfg & DEG))
     {
      char dgrstr[80];
      dgr2str(dgrstr, fVal);
      sprintf(strings[n++], "%65.64s", dgrstr);
     }
+
+   // (RO) String format found
    if ((Options & STR)||(scfg & STR))
     {
-     if (ccalc->Sres()[0])
+     if (Auto->Checked)
       {
-       char strcstr[80];
-       sprintf(strcstr, "'%s'", ccalc->Sres());
-       sprintf(strings[n++], "%65.64s", strcstr);
+       if (ccalc->Sres()[0])
+        {
+         char strcstr[80];
+         sprintf(strcstr, "'%s'", ccalc->Sres());
+         if (strcstr[0]) sprintf(strings[n++], "%65.64s", strcstr);
+        }
       }
-     else sprintf(strings[n++], "%65.64s", "''");
+     else
+      {
+       if (ccalc->Sres()[0])
+        {
+         char strcstr[80];
+         sprintf(strcstr, "'%s'", ccalc->Sres());
+         sprintf(strings[n++], "%65.64s", strcstr);
+        }
+       else sprintf(strings[n++], "%65.64s", "''");
+      }
     }
+
   }
 
 
@@ -660,7 +757,7 @@ void __fastcall TCalcForm::SetOpt(bool forced)
 
 void __fastcall TCalcForm::Exit1Click(TObject *Sender)
 {
- Close();               
+ Close();
 }
 //---------------------------------------------------------------------------
 
@@ -947,6 +1044,25 @@ void __fastcall TCalcForm::InchClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+void __fastcall TCalcForm::AutoClick(TObject *Sender)
+{
+ int opt = ccalc->issyntax();
+ Auto->Checked ^= 1;
+ if (Auto->Checked)
+  {
+   Options |= AUTO;
+   opt |= AUTO;
+  }
+ else
+  {
+   Options &= ~AUTO;
+   opt &= ~AUTO;
+  }
+ ccalc->syntax(opt);
+ CBStrChange(Sender);
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TCalcForm::AllClick(TObject *Sender)
 {
  All->Checked ^= 1;
@@ -1107,4 +1223,6 @@ void __fastcall TCalcForm::CBStrKeyUp(TObject *Sender, WORD &Key,
  //AddHist();
 }
 //---------------------------------------------------------------------------
+
+
 
