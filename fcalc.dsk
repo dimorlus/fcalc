@@ -27,7 +27,7 @@ EditWindowCount=1
 [D:\PCProjects\fcalc\frcalc.cpp]
 ModuleType=SourceModule
 FormState=1
-FormOnTop=1
+FormOnTop=0
 
 [D:\PCProjects\fcalc\scalc.cpp]
 ModuleType=SourceModule
@@ -80,7 +80,7 @@ FormOnTop=0
 
 [EditWindow0]
 ViewCount=10
-CurrentView=5
+CurrentView=0
 View0=0
 View1=1
 View2=2
@@ -115,9 +115,9 @@ BottomPanelData=00000400010000000B0000004D657373616765566965774B0600000000000002
 
 [View0]
 Module=D:\PCProjects\fcalc\frcalc.cpp
-CursorX=38
-CursorY=1039
-TopLine=1032
+CursorX=1
+CursorY=1069
+TopLine=1043
 LeftCol=1
 
 [View1]
@@ -150,9 +150,9 @@ LeftCol=1
 
 [View5]
 Module=D:\PCProjects\fcalc\scalc.cpp
-CursorX=54
-CursorY=1140
-TopLine=1126
+CursorX=1
+CursorY=104
+TopLine=78
 LeftCol=1
 
 [View6]
@@ -200,8 +200,8 @@ Left=0
 Top=0
 Width=1920
 Height=123
-MaxLeft=-4
-MaxTop=-4
+MaxLeft=-1
+MaxTop=-1
 MaxWidth=1928
 MaxHeight=123
 ClientWidth=1920
@@ -317,7 +317,7 @@ LRDockWidth=190
 Dockable=1
 SplitPos=129
 ArrangeBy=Name
-SelectedItem=Caption
+SelectedItem=OnCreate
 ExpandedItems=Anchors,BorderIcons
 HiddenCategories=
 

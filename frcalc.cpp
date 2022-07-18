@@ -367,9 +367,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
        else sprintf(strings[n++], "%65.64s", "''");
       }
     }
-
   }
-
 
  Graphics::TBitmap* bm = new Graphics::TBitmap;
  bm->Canvas->Font = MOutput->Font;
@@ -681,7 +679,7 @@ void __fastcall TCalcForm::FormClose(TObject *Sender, TCloseAction &Action)
    Reg->Access = KEY_ALL_ACCESS;
    if (Reg->OpenKey("\\SOFTWARE\\MLT\\SCALC", true))
     {
-     //CBStr->Items = SaveHist; 
+     //CBStr->Items = SaveHist;
      for(int i = 0; i < 30; i++)
       if ((i < CBStr->Items->Count) &&
           (CBStr->Items->Objects[i] == NULL)) //History record
@@ -691,7 +689,7 @@ void __fastcall TCalcForm::FormClose(TObject *Sender, TCloseAction &Action)
        Reg->WriteString(AnsiString().sprintf("HIST%02d", i), "");
 
      Reg->WriteString("Str", CBStr->Text);
-     Reg->WriteInteger("Top", Top);                    
+     Reg->WriteInteger("Top", Top);
      Reg->WriteInteger("Left", Left);
      Reg->WriteInteger("Opacity", opacity);
      Reg->WriteInteger("BinWide", binwide);
@@ -729,7 +727,7 @@ void __fastcall TCalcForm::CasesensitiveClick(TObject *Sender)
 void __fastcall TCalcForm::SetOpt(bool forced)
 {
  int opt = ccalc->issyntax()|(Options & (SCI+FRI));
-                                         
+
  if (forced)
   {
    if (Options & PAS) opt |= PAS;
@@ -1203,6 +1201,7 @@ void __fastcall TCalcForm::Opt2Mnu(void)
  String->Checked = Options & STR;
  Fraction->Checked = Options & FRC;
  Inch->Checked = Options & FRI;
+ Auto->Checked = Options & AUTO;
  if (Options & MNU)
   {
    CalcForm->MnCalc->Visible = true;
