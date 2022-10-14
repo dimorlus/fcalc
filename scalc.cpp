@@ -2323,18 +2323,10 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
         case toMUL:
         case toDIV:
         case toMOD:
+        case toPOW:
         case toPAR:
         case toADD:
         case toSUB:
-        case toASL:
-        case toASR:
-        case toLSR:
-        case toGT:
-        case toGE:
-        case toLT:
-        case toLE:
-        case toEQ:
-        case toNE:
          percent = true;
         break;
         default:
@@ -2723,11 +2715,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get_int() & v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2755,11 +2742,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get_int() | v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2787,11 +2769,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get_int() ^ v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2819,11 +2796,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get_int() << v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2851,11 +2823,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get_int() >> v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2884,11 +2851,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-2].ival = (unsigned_t)v_stack[v_sp-2].get_int()
                                          >> v_stack[v_sp-1].get_int();
                   v_stack[v_sp-2].tag = tvINT;
@@ -2917,11 +2879,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    v_stack[v_sp-2].ival = v_stack[v_sp-1].get()==100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get() == v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -2945,11 +2903,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    v_stack[v_sp-2].ival = v_stack[v_sp-1].get()!=100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get() != v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -2973,13 +2927,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    float_t left = v_stack[v_sp-2].get();
-                    float_t right = v_stack[v_sp-1].get();
-                    v_stack[v_sp-2].ival = left>left*right/100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                       v_stack[v_sp-2].get() > v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -3003,13 +2951,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    float_t left = v_stack[v_sp-2].get();
-                    float_t right = v_stack[v_sp-1].get();
-                    v_stack[v_sp-2].ival = left>=left*right/100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get() >= v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -3033,13 +2975,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    float_t left = v_stack[v_sp-2].get();
-                    float_t right = v_stack[v_sp-1].get();
-                    v_stack[v_sp-2].ival = left<left*right/100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get() < v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -3063,13 +2999,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    float_t left = v_stack[v_sp-2].get();
-                    float_t right = v_stack[v_sp-1].get();
-                    v_stack[v_sp-2].ival = left<=left*right/100.0;
-                   }
-                  else v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].ival =
                     v_stack[v_sp-2].get() <= v_stack[v_sp-1].get();
                   v_stack[v_sp-2].tag = tvINT;
                 }
@@ -3091,11 +3021,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-1].fval += 1;
                 }
               if (!assign()) return qnan;
@@ -3116,11 +3041,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
                   v_stack[v_sp-1].fval -= 1;
                 }
               if (!assign()) return qnan;
@@ -3189,12 +3109,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
-
                   v_stack[v_sp-1].fval = (float_t)Factorial((float_t)v_stack[v_sp-1].fval);
                 }
               v_stack[v_sp-1].var = NULL;
@@ -3230,12 +3144,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
                 {
-                  if (v_stack[v_sp-1].tag == tvPERCENT)
-                   {
-                    error(v_stack[v_sp-1].pos, "Illegal percent operation");
-                    return qnan;
-                   }
-
                   v_stack[v_sp-1].ival = !v_stack[v_sp-1].fval;
                   v_stack[v_sp-1].tag = tvINT;
                 }

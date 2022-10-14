@@ -151,8 +151,8 @@ LeftCol=1
 [View5]
 Module=D:\PCProjects\fcalc\scalc.cpp
 CursorX=1
-CursorY=2191
-TopLine=2177
+CursorY=1
+TopLine=1
 LeftCol=1
 
 [View6]
@@ -184,7 +184,7 @@ TopLine=62
 LeftCol=1
 
 [Watches]
-Count=6
+Count=1
 Watch0='oper',256,0,18,1,0,'Watches'
 
 [Breakpoints]
