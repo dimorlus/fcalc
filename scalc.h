@@ -62,6 +62,7 @@ enum t_value
 {
   tvINT,
   tvFLOAT,
+  tvPERCENT,
   tvSTR
 };
 
@@ -180,7 +181,7 @@ class calculator
 
     inline unsigned string_hash_function(char* p);
     symbol* add(t_symbol tag, const char* name, void* func = NULL);
-    t_operator scan(bool operand);
+    t_operator scan(bool operand, bool percent);
     void  error(int pos, const char* msg);
     inline void  error(const char* msg) {error(pos-1, msg);}
     bool  assign();
