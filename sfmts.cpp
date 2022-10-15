@@ -117,7 +117,8 @@ int b2str(char *str, const char *fmt, unsigned __int64 b)
        }
 
       mask = 1i64 << 63;
-      for(w = 64; ((w > 0) && (mask > 1) && ((b & mask) == 0)); w--) mask >>=1;
+      //for(w = 64; ((w > 0) && (mask > 1) && ((b & mask) == 0)); w--) mask >>=1;
+      for(w = wide; ((w > 0) && (mask > 1) && ((b & mask) == 0)); w--) mask >>=1;
       if (wide <= w) wide = w;
 
       mask = 1i64 << (wide-1);

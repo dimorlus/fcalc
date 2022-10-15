@@ -279,8 +279,8 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
     {
      char binfstr[16];
      char binstr[80];
-     sprintf(binfstr, "%%%ib", binwide);
-     b2str(binstr, binfstr, iVal);
+     sprintf(binfstr, "%%%ib", binwide);         
+     b2str(binstr, binfstr, iVal);  
      if (Auto->Checked)
       {
        if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64sb", binstr);
