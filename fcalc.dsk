@@ -11,33 +11,28 @@ File_8=SourceModule,'C:\Program Files (x86)\Borland\CBuilder6\Include\stl\_ostre
 File_9=SourceModule,'c:\program files (x86)\borland\cbuilder6\include\stl\_sstream.c',0,1,164,1,184,0,0
 
 [Modules]
-Module0=D:\PCProjects\fcalc\frcalc.cpp
-Module1=D:\PCProjects\fcalc\sfmts.cpp
-Module2=D:\PCProjects\fcalc\scalc.cpp
-Module3=c:\program files (x86)\borland\cbuilder6\include\time.h
-Module4=c:\program files (x86)\borland\cbuilder6\include\math.h
-Module5=c:\program files (x86)\borland\cbuilder6\include\stdlib.h
-Module6=c:\program files (x86)\borland\cbuilder6\include\ctype.h
-Module7=D:\PCProjects\fcalc\ViewVars.cpp
-Module8=D:\PCProjects\fcalc\fcalc.bpr
+Module0=D:\PCProjects\fcalc\scalc.cpp
+Module1=D:\PCProjects\fcalc\frcalc.cpp
+Module2=c:\program files (x86)\borland\cbuilder6\include\time.h
+Module3=c:\program files (x86)\borland\cbuilder6\include\math.h
+Module4=c:\program files (x86)\borland\cbuilder6\include\stdlib.h
+Module5=c:\program files (x86)\borland\cbuilder6\include\ctype.h
+Module6=D:\PCProjects\fcalc\ViewVars.cpp
+Module7=D:\PCProjects\fcalc\fcalc.bpr
+Module8=D:\PCProjects\fcalc\sfmts.cpp
 Module9=D:\PCProjects\fcalc\StrUtils.cpp
 Count=10
 EditWindowCount=1
-
-[D:\PCProjects\fcalc\frcalc.cpp]
-ModuleType=SourceModule
-FormState=1
-FormOnTop=0
-
-[D:\PCProjects\fcalc\sfmts.cpp]
-ModuleType=SourceModule
-FormState=0
-FormOnTop=0
 
 [D:\PCProjects\fcalc\scalc.cpp]
 ModuleType=SourceModule
 FormState=0
 FormOnTop=0
+
+[D:\PCProjects\fcalc\frcalc.cpp]
+ModuleType=SourceModule
+FormState=1
+FormOnTop=1
 
 [c:\program files (x86)\borland\cbuilder6\include\time.h]
 ModuleType=SourceModule
@@ -69,6 +64,11 @@ ModuleType=SourceModule
 FormState=0
 FormOnTop=0
 
+[D:\PCProjects\fcalc\sfmts.cpp]
+ModuleType=SourceModule
+FormState=0
+FormOnTop=0
+
 [D:\PCProjects\fcalc\StrUtils.cpp]
 ModuleType=SourceModule
 FormState=0
@@ -80,7 +80,7 @@ FormOnTop=0
 
 [EditWindow0]
 ViewCount=10
-CurrentView=0
+CurrentView=5
 View0=0
 View1=1
 View2=2
@@ -150,9 +150,9 @@ LeftCol=1
 
 [View5]
 Module=D:\PCProjects\fcalc\scalc.cpp
-CursorX=1
-CursorY=1
-TopLine=1
+CursorX=18
+CursorY=2645
+TopLine=2640
 LeftCol=1
 
 [View6]
@@ -184,7 +184,7 @@ TopLine=62
 LeftCol=1
 
 [Watches]
-Count=2
+Count=1
 Watch0='mask',64,0,18,1,0,'Watches'
 
 [Breakpoints]
@@ -262,11 +262,11 @@ Visible=1
 State=0
 Left=12
 Top=0
-Width=1594
+Width=1599
 Height=230
 MaxLeft=-1
 MaxTop=-1
-ClientWidth=1594
+ClientWidth=1599
 ClientHeight=230
 TBDockHeight=230
 LRDockWidth=421

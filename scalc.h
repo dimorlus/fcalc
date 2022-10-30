@@ -72,7 +72,7 @@ enum t_operator
   toLPAR, toRPAR, toFUNC, toPOSTINC, toPOSTDEC, toFACT,
   toPREINC, toPREDEC, toPLUS, toMINUS, toNOT, toCOM,
   toPOW,
-  toMUL, toDIV, toMOD, toPAR,
+  toPERCENT, toMUL, toDIV, toMOD, toPAR,
   toADD, toSUB,
   toASL, toASR, toLSR,
   toGT, toGE, toLT, toLE,

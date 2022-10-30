@@ -1791,6 +1791,12 @@ t_operator calculator::scan(bool operand, bool percent)
           pos += 1;
           return toSETMOD;
         }
+      else
+      if (buf[pos] == '%')
+        {
+          pos += 1;
+          return toPERCENT;
+        }
       return toMOD;
     case '<':
       if (buf[pos] == '<')
@@ -2236,7 +2242,7 @@ static int lpr[toTERMINALS] =
   5, 98, 98, 98,    // FUNC, POSTINC, POSTDEC, FACT
   98, 98, 98, 98, 98, 98, // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
   90,               // POW,
-  80, 80, 80, 80,   // MUL, DIV, MOD, PAR
+  80, 80, 80, 80, 80,   // toPERCENT, MUL, DIV, MOD, PAR
   70, 70,           // ADD, SUB,
   60, 60, 60,       // ASL, ASR, LSR,
   50, 50, 50, 50,   // GT, GE, LT, LE,
@@ -2257,7 +2263,7 @@ static int rpr[toTERMINALS] =
   120, 99, 99, 99,  // FUNC, POSTINC, POSTDEC, FACT
   99, 99, 99, 99, 99, 99, // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
   95,               // POW,
-  80, 80, 80, 80,   // MUL, DIV, MOD, PAR
+  80, 80, 80, 80, 80,   // toPERCENT, MUL, DIV, MOD, PAR
   70, 70,           // ADD, SUB,
   60, 60, 60,       // ASL, ASR, LSR,
   50, 50, 50, 50,   // GT, GE, LT, LE,
@@ -2622,6 +2628,37 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                v_stack[v_sp-2].fval = 1/(1/left+1/(left*right/100.0));
               }
              else v_stack[v_sp-2].fval = 1/(1/v_stack[v_sp-1].get()+1/v_stack[v_sp-2].get());
+             v_stack[v_sp-2].tag = tvFLOAT;
+             v_sp -= 1;
+             v_stack[v_sp-1].var = NULL;
+            break;
+
+            case toPERCENT:
+             if ((v_stack[v_sp-1].tag == tvSTR) ||
+                 (v_stack[v_sp-2].tag == tvSTR))
+               {
+                 error(v_stack[v_sp-2].pos, "Illegal string operation");
+                 return qnan;
+               }
+             else
+             if ((v_stack[v_sp-1].get() == 0.0) ||
+                 (v_stack[v_sp-2].get() == 0.0))
+              {
+               error(v_stack[v_sp-2].pos, "Division by zero");
+               return qnan;
+              }
+             if (v_stack[v_sp-1].tag == tvPERCENT) 
+              {
+               //float_t left = v_stack[v_sp-2].get();
+               //float_t right = v_stack[v_sp-1].get();
+               //v_stack[v_sp-2].fval = 1/(1/left+1/(left*right/100.0));
+              }
+             else
+              {
+               float_t left = v_stack[v_sp-2].get();
+               float_t right = v_stack[v_sp-1].get();
+               v_stack[v_sp-2].fval = 100.0*(left-right)/right;
+              }
              v_stack[v_sp-2].tag = tvFLOAT;
              v_sp -= 1;
              v_stack[v_sp-1].var = NULL;
