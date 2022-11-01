@@ -150,9 +150,9 @@ LeftCol=1
 
 [View5]
 Module=D:\PCProjects\fcalc\scalc.cpp
-CursorX=18
-CursorY=2645
-TopLine=2640
+CursorX=66
+CursorY=2419
+TopLine=2419
 LeftCol=1
 
 [View6]
@@ -201,8 +201,8 @@ Left=0
 Top=0
 Width=1920
 Height=123
-MaxLeft=-4
-MaxTop=-4
+MaxLeft=-1
+MaxTop=-1
 MaxWidth=1928
 MaxHeight=123
 ClientWidth=1920

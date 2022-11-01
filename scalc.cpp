@@ -2486,7 +2486,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                   {
                    float_t left = v_stack[v_sp-2].get();
                    float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = left+left*right/100.0;
+                   v_stack[v_sp-2].fval = left+(left*right/100.0);
                   }
                  else v_stack[v_sp-2].fval =
                     v_stack[v_sp-2].get() + v_stack[v_sp-1].get();
@@ -2521,7 +2521,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                   {
                    float_t left = v_stack[v_sp-2].get();
                    float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = left-left*right/100.0;
+                   v_stack[v_sp-2].fval = left-(left*right/100.0);
                   }
                  else v_stack[v_sp-2].fval =
                     v_stack[v_sp-2].get() - v_stack[v_sp-1].get();
@@ -2555,7 +2555,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                   {
                    float_t left = v_stack[v_sp-2].get();
                    float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = left*left*right/100.0;
+                   v_stack[v_sp-2].fval = left*(left*right/100.0);
                   }
                  else v_stack[v_sp-2].fval =
                     v_stack[v_sp-2].get() * v_stack[v_sp-1].get();
@@ -2593,7 +2593,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                  {
                   float_t left = v_stack[v_sp-2].get();
                   float_t right = v_stack[v_sp-1].get();
-                  v_stack[v_sp-2].fval = left/left*right/100.0;
+                  v_stack[v_sp-2].fval = left/(left*right/100.0);
                  }
                 else v_stack[v_sp-2].fval =
                    v_stack[v_sp-2].get() / v_stack[v_sp-1].get();
