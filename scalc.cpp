@@ -2296,12 +2296,6 @@ bool calculator::assign()
 float_t calculator::evaluate(char* expression, __int64 * piVal)
 {
   char var_name[16];
-  buf = expression;
-  v_sp = 0;
-  o_sp = 0;
-  pos = 0;
-  err[0] = '\0';
-  o_stack[o_sp++] = toBEGIN;
   bool operand = true;
   bool percent = false;
   int n_args = 0;
@@ -2311,9 +2305,13 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
   const double mindbl = *(double*)&i64mindbl;
   const float_t qnan = 0.0/0.0;
 
-//  _clearfp();
-//  _controlfp(0, -1);
-//  _control87(MCW_EM, MCW_EM);
+  buf = expression;
+  v_sp = 0;
+  o_sp = 0;
+  pos = 0;
+  err[0] = '\0';
+  o_stack[o_sp++] = toBEGIN;
+
   memset(sres, 0, STRBUF);
   while (true)
     {
@@ -2333,6 +2331,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
         case toPAR:
         case toADD:
         case toSUB:
+        //case toPERCENT:
          percent = true;
         break;
         default:
@@ -2366,7 +2365,6 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
           return qnan;
          }
        }
-      //int n_args = 1;
       n_args = 1;
       while (lpr[o_stack[o_sp-1]] >= rpr[oper])
         {
@@ -2385,10 +2383,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                   error("Unmatched ')'");
                   return qnan;
                 }
-              if (oper != toEND)
-                {
-                 error("Unexpected end of input");
-                }
+              if (oper != toEND) error("Unexpected end of input");
               if (v_sp == 1)
                 {
                   if (scfg & UTMP)
@@ -2422,10 +2417,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                     }
                 }
               else
-              if (v_sp != 0)
-                {
-                  error("Unexpected end of expression");
-                }
+              if (v_sp != 0) error("Unexpected end of expression");
               return qnan;
 
             case toCOMMA:
@@ -2436,25 +2428,25 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
               if ((v_stack[v_sp-1].tag == tvINT) &&
                   (v_stack[v_sp-2].tag == tvINT))
                 {
-                  v_stack[v_sp-2].ival = v_stack[v_sp-1].ival;
+                 v_stack[v_sp-2].ival = v_stack[v_sp-1].ival;
                 }
               else
               if ((v_stack[v_sp-1].tag == tvSTR) &&
                   (v_stack[v_sp-2].tag == tvSTR))
                 {
-                  strcpy(v_stack[v_sp-2].sval, v_stack[v_sp-1].sval);
+                 strcpy(v_stack[v_sp-2].sval, v_stack[v_sp-1].sval);
                 }
               else
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
                 {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
+                 error(v_stack[v_sp-2].pos, "Illegal string operation");
+                 return qnan;
                 }
               else
                 {
-                  v_stack[v_sp-2].fval = v_stack[v_sp-1].get();
-                  v_stack[v_sp-2].tag = tvFLOAT;
+                 v_stack[v_sp-2].fval = v_stack[v_sp-1].get();
+                 v_stack[v_sp-2].tag = tvFLOAT;
                 }
               v_sp -= 1;
               v_stack[v_sp-1].var = NULL;
@@ -2465,20 +2457,20 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
               if ((v_stack[v_sp-1].tag == tvINT) &&
                   (v_stack[v_sp-2].tag == tvINT))
                 {
-                  v_stack[v_sp-2].ival += v_stack[v_sp-1].ival;
+                 v_stack[v_sp-2].ival += v_stack[v_sp-1].ival;
                 }
               else
               if ((v_stack[v_sp-1].tag == tvSTR) &&
                   (v_stack[v_sp-2].tag == tvSTR))
                 {
-                  strcat(v_stack[v_sp-2].sval, v_stack[v_sp-1].sval);
+                 strcat(v_stack[v_sp-2].sval, v_stack[v_sp-1].sval);
                 }
               else
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
                 {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
+                 error(v_stack[v_sp-2].pos, "Illegal string operation");
+                 return qnan;
                 }
               else
                 {
@@ -2495,9 +2487,9 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               v_sp -= 1;
               if (cop == toSETADD)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
@@ -2505,33 +2497,33 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
             case toSETSUB:
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
-                {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
-                }
+               {
+                error(v_stack[v_sp-2].pos, "Illegal string operation");
+                return qnan;
+               }
               else
               if ((v_stack[v_sp-1].tag == tvINT) &&
                   (v_stack[v_sp-2].tag == tvINT))
-                {
-                  v_stack[v_sp-2].ival -= v_stack[v_sp-1].ival;
-                }
+               {
+                v_stack[v_sp-2].ival -= v_stack[v_sp-1].ival;
+               }
               else
-                {
-                 if (v_stack[v_sp-1].tag == tvPERCENT)
-                  {
-                   float_t left = v_stack[v_sp-2].get();
-                   float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = left-(left*right/100.0);
-                  }
-                 else v_stack[v_sp-2].fval =
-                    v_stack[v_sp-2].get() - v_stack[v_sp-1].get();
-                 v_stack[v_sp-2].tag = tvFLOAT;
-                }
+               {
+                if (v_stack[v_sp-1].tag == tvPERCENT)
+                 {
+                  float_t left = v_stack[v_sp-2].get();
+                  float_t right = v_stack[v_sp-1].get();
+                  v_stack[v_sp-2].fval = left-(left*right/100.0);
+                 }
+                else v_stack[v_sp-2].fval =
+                   v_stack[v_sp-2].get() - v_stack[v_sp-1].get();
+                v_stack[v_sp-2].tag = tvFLOAT;
+               }
               v_sp -= 1;
               if (cop == toSETSUB)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
@@ -2539,33 +2531,33 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
             case toSETMUL:
               if ((v_stack[v_sp-1].tag == tvINT) &&
                   (v_stack[v_sp-2].tag == tvINT))
-                {
-                  v_stack[v_sp-2].ival *= v_stack[v_sp-1].ival;
-                }
+               {
+                v_stack[v_sp-2].ival *= v_stack[v_sp-1].ival;
+               }
               else
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
-                {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
-                }
+               {
+                error(v_stack[v_sp-2].pos, "Illegal string operation");
+                return qnan;
+               }
               else
-                {
-                 if (v_stack[v_sp-1].tag == tvPERCENT)
-                  {
-                   float_t left = v_stack[v_sp-2].get();
-                   float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = left*(left*right/100.0);
-                  }
-                 else v_stack[v_sp-2].fval =
-                    v_stack[v_sp-2].get() * v_stack[v_sp-1].get();
-                 v_stack[v_sp-2].tag = tvFLOAT;
-                }
+               {
+                if (v_stack[v_sp-1].tag == tvPERCENT)
+                 {
+                  float_t left = v_stack[v_sp-2].get();
+                  float_t right = v_stack[v_sp-1].get();
+                  v_stack[v_sp-2].fval = left*(left*right/100.0);
+                 }
+                else v_stack[v_sp-2].fval =
+                   v_stack[v_sp-2].get() * v_stack[v_sp-1].get();
+                v_stack[v_sp-2].tag = tvFLOAT;
+               }
               v_sp -= 1;
               if (cop == toSETMUL)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
@@ -2610,10 +2602,10 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
             case toPAR:
              if ((v_stack[v_sp-1].tag == tvSTR) ||
                  (v_stack[v_sp-2].tag == tvSTR))
-               {
-                 error(v_stack[v_sp-2].pos, "Illegal string operation");
-                 return qnan;
-               }
+              {
+               error(v_stack[v_sp-2].pos, "Illegal string operation");
+               return qnan;
+              }
              else
              if ((v_stack[v_sp-1].get() == 0.0) ||
                  (v_stack[v_sp-2].get() == 0.0))
@@ -2647,11 +2639,12 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                error(v_stack[v_sp-2].pos, "Division by zero");
                return qnan;
               }
-             if (v_stack[v_sp-1].tag == tvPERCENT) 
+             if (v_stack[v_sp-1].tag == tvPERCENT)
               {
-               //float_t left = v_stack[v_sp-2].get();
-               //float_t right = v_stack[v_sp-1].get();
-               //v_stack[v_sp-2].fval = 1/(1/left+1/(left*right/100.0));
+               float_t left = v_stack[v_sp-2].get();
+               float_t right = v_stack[v_sp-1].get();
+               right = left*right/100.0;
+               v_stack[v_sp-2].fval = 100.0*(left-right)/right;
               }
              else
               {
@@ -2668,37 +2661,37 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
             case toSETMOD:
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
-                {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
-                }
+               {
+                error(v_stack[v_sp-2].pos, "Illegal string operation");
+                return qnan;
+               }
               else
               if (v_stack[v_sp-1].get() == 0.0)
-                {
-                  error(v_stack[v_sp-2].pos, "Division by zero");
-                  return qnan;
-                }
+               {
+                error(v_stack[v_sp-2].pos, "Division by zero");
+                return qnan;
+               }
               if (v_stack[v_sp-1].tag == tvINT && v_stack[v_sp-2].tag == tvINT)
-                {
-                  v_stack[v_sp-2].ival %= v_stack[v_sp-1].ival;
-                }
+               {
+                v_stack[v_sp-2].ival %= v_stack[v_sp-1].ival;
+               }
               else
-                {
-                 if (v_stack[v_sp-1].tag == tvPERCENT)
-                  {
-                   float_t left = v_stack[v_sp-2].get();
-                   float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = fmod(left, left*right/100.0);
-                  }
-                 else v_stack[v_sp-2].fval =
-                     fmod(v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
-                 v_stack[v_sp-2].tag = tvFLOAT;
-                }
+               {
+                if (v_stack[v_sp-1].tag == tvPERCENT)
+                 {
+                  float_t left = v_stack[v_sp-2].get();
+                  float_t right = v_stack[v_sp-1].get();
+                  v_stack[v_sp-2].fval = fmod(left, left*right/100.0);
+                 }
+                else v_stack[v_sp-2].fval =
+                    fmod(v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
+                v_stack[v_sp-2].tag = tvFLOAT;
+               }
               v_sp -= 1;
               if (cop == toSETMOD)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
@@ -2712,28 +2705,28 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                 }
               else
               if (v_stack[v_sp-1].tag == tvINT && v_stack[v_sp-2].tag == tvINT)
-                {
-                  v_stack[v_sp-2].ival =
-                    (int_t)pow((float_t)v_stack[v_sp-2].ival,
-                               (float_t)v_stack[v_sp-1].ival);
-                }
+               {
+                v_stack[v_sp-2].ival =
+                  (int_t)pow((float_t)v_stack[v_sp-2].ival,
+                             (float_t)v_stack[v_sp-1].ival);
+               }
               else
-                {
-                 if (v_stack[v_sp-1].tag == tvPERCENT)
-                  {
-                   float_t left = v_stack[v_sp-2].get();
-                   float_t right = v_stack[v_sp-1].get();
-                   v_stack[v_sp-2].fval = pow(left, left*right/100.0);
-                  }
-                 else v_stack[v_sp-2].fval =
-                    pow(v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
-                  v_stack[v_sp-2].tag = tvFLOAT;
-                }
+               {
+                if (v_stack[v_sp-1].tag == tvPERCENT)
+                 {
+                  float_t left = v_stack[v_sp-2].get();
+                  float_t right = v_stack[v_sp-1].get();
+                  v_stack[v_sp-2].fval = pow(left, left*right/100.0);
+                 }
+                else v_stack[v_sp-2].fval =
+                   pow(v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
+                 v_stack[v_sp-2].tag = tvFLOAT;
+               }
               v_sp -= 1;
               if (cop == toSETPOW)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
@@ -2741,26 +2734,26 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
             case toSETAND:
               if ((v_stack[v_sp-1].tag == tvSTR) ||
                   (v_stack[v_sp-2].tag == tvSTR))
-                {
-                  error(v_stack[v_sp-2].pos, "Illegal string operation");
-                  return qnan;
-                }
+               {
+                error(v_stack[v_sp-2].pos, "Illegal string operation");
+                return qnan;
+               }
               else
               if (v_stack[v_sp-1].tag == tvINT && v_stack[v_sp-2].tag == tvINT)
-                {
-                  v_stack[v_sp-2].ival &= v_stack[v_sp-1].ival;
-                }
+               {
+                v_stack[v_sp-2].ival &= v_stack[v_sp-1].ival;
+               }
               else
-                {
-                  v_stack[v_sp-2].ival =
-                    v_stack[v_sp-2].get_int() & v_stack[v_sp-1].get_int();
-                  v_stack[v_sp-2].tag = tvINT;
-                }
+               {
+                v_stack[v_sp-2].ival =
+                  v_stack[v_sp-2].get_int() & v_stack[v_sp-1].get_int();
+                v_stack[v_sp-2].tag = tvINT;
+               }
               v_sp -= 1;
               if (cop == toSETAND)
-                {
-                  if (!assign()) return qnan;
-                }
+               {
+                if (!assign()) return qnan;
+               }
               v_stack[v_sp-1].var = NULL;
               break;
 
