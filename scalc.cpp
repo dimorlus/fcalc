@@ -186,7 +186,31 @@ float_t Erf(float_t x)
 
  return sign*y;
 }
+/*
+//https://vak.dreamwidth.org/993299.html
+int_t nearly_equal(double a, double b, int ignore_nbits)
+{
+    if (a == b)
+        return true;
 
+    // Разбиваем числа на мантиссу и экспоненту.
+    int a_exponent, b_exponent;
+    double a_mantissa = frexp(a, &a_exponent);
+    double b_mantissa = frexp(b, &b_exponent);
+
+    // Экспоненты обязаны совпасть.
+    if (a_exponent != b_exponent)
+        return false;
+
+    // Вычитаем мантиссы, образуем положительную дельту.
+    double delta = fabs(a_mantissa - b_mantissa);
+
+    // Определяем порог допустимой разницы.
+    double limit = ldexp(1.0, ignore_nbits - 52);
+
+    return delta < limit?1:0;
+}
+*/
 float_t Erfc(float_t x)
 {
  return 1-Erf(x);
@@ -747,6 +771,14 @@ static float_t Factorial(float_t x)
  return res;
 }
 
+//Vref=Vout*Rl/(Rh+Rl)
+//Vout=Vref*(Rh+Rl)/Rl
+static float_t Vout(float_t Vref, float_t Rh, float_t Rl)
+{
+ return Vref*(Rh+Rl)/Rl;
+}
+
+
 static int _matherr(struct _exception *e)
 {
   return 0;             /* error has been handled */
@@ -1066,6 +1098,7 @@ calculator::calculator(int cfg)
   randomize();
 
   add(tsFFUNC1, "abs", (void*)(float_t(*)(float_t))fabsl);
+  //add(tsIFFUNC3, "aeq", (void*)(int_t(*)(float_t, float_t, int_t))nearly_equal);
   add(tsFFUNC1, "erf", (void*)(float_t(*)(float_t))Erf);
   add(tsFFUNC1, "acos", (void*)(float_t(*)(float_t))Acos);
   add(tsFFUNC1, "asin", (void*)(float_t(*)(float_t))Asin);
@@ -1139,6 +1172,8 @@ calculator::calculator(int cfg)
   add(tsFFUNC1, "cs", (void*)(float_t(*)(float_t))Cs);
   add(tsFFUNC1, "acs", (void*)(float_t(*)(float_t))Acs);
   add(tsFFUNC1, "rnd", (void*)(float_t(*)(float_t))Random);
+  add(tsFFUNC3, "vout", (void*)(float_t(*)(float_t, float_t, float_t))Vout);
+
 
   add(tsFFUNC2, "ee", (void*)(float_t(*)(float_t,float_t))Ee);
 
@@ -2185,7 +2220,7 @@ t_operator calculator::scan(bool operand, bool percent)
        {
         error("stack overflow");
         return toERROR;
-       }
+       }                              
       if (!ierr && ipos >= fpos)
        {
         v_stack[v_sp].tag = tvINT;
@@ -3257,6 +3292,20 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                       v_sp -= 2;
                       break;
 
+                    case tsIFFUNC3:
+                      if (n_args != 3)
+                        {
+                          error(v_stack[v_sp-n_args-1].pos,
+                                "Function should take three arguments");
+                          return qnan;
+                        }
+                      v_stack[v_sp-4].ival =
+                        (*(int_t(*)(double, double, int_t))sym->func)
+                        (v_stack[v_sp-3].get_dbl(), v_stack[v_sp-2].get_dbl(), v_stack[v_sp-1].get_int());
+                      v_stack[v_sp-4].tag = tvINT;
+                      v_sp -= 3;
+                    break;
+
                     case tsFFUNC1:
                       if (n_args != 1)
                         {
@@ -3283,6 +3332,20 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                       v_stack[v_sp-3].tag = tvFLOAT;
                       v_sp -= 2;
                       break;
+
+                    case tsFFUNC3:
+                      if (n_args != 3)
+                        {
+                          error(v_stack[v_sp-n_args-1].pos,
+                                "Function should take three arguments");
+                          return qnan;
+                        }
+                      v_stack[v_sp-4].fval =
+                        (*(float_t(*)(float_t, float_t, float_t))sym->func)
+                        (v_stack[v_sp-3].get(), v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
+                      v_stack[v_sp-4].tag = tvFLOAT;
+                      v_sp -= 3;
+                    break;
 
                     case tsPFUNCn:
                       if (n_args < 1)

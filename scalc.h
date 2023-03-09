@@ -97,6 +97,8 @@ enum t_symbol
   tsIFUNC2, //int f(int x, int y)
   tsFFUNC1, //float f(float x)
   tsFFUNC2, //float f(float x, float y)
+  tsFFUNC3,//float f(float x, float y, float z)
+  tsIFFUNC3,//int f(float x, float y, int z)
   tsPFUNCn, //int printf(char *format, ...)
   tsSIFUNC1 //int f(char *s)
 };
@@ -133,6 +135,11 @@ class value
     inline float_t get()
     {
       return tag == tvINT ? (float_t)ival : fval;
+    }
+
+    inline float_t get_dbl()
+    {
+      return tag == tvINT ? (double)ival : (double)fval;
     }
 
     inline int_t get_int()
