@@ -771,6 +771,16 @@ static float_t Factorial(float_t x)
  return res;
 }
 
+
+static float_t Cmp(float_t x, float_t y, float_t prec)
+{
+ float_t rel_diff = fabs(x - y) / (x>y?x:y);
+ if (rel_diff < prec) return 0;
+ else if (x < y) return -1;
+ else return 1;
+}
+
+
 //Vref=Vout*Rl/(Rh+Rl)
 //Vout=Vref*(Rh+Rl)/Rl
 static float_t Vout(float_t Vref, float_t Rh, float_t Rl)
@@ -1173,6 +1183,7 @@ calculator::calculator(int cfg)
   add(tsFFUNC1, "acs", (void*)(float_t(*)(float_t))Acs);
   add(tsFFUNC1, "rnd", (void*)(float_t(*)(float_t))Random);
   add(tsFFUNC3, "vout", (void*)(float_t(*)(float_t, float_t, float_t))Vout);
+  add(tsFFUNC3, "cmp", (void*)(float_t(*)(float_t, float_t, float_t))Cmp);
 
 
   add(tsFFUNC2, "ee", (void*)(float_t(*)(float_t,float_t))Ee);
@@ -2217,7 +2228,7 @@ t_operator calculator::scan(bool operand, bool percent)
         return toERROR;
        }
       if (v_sp == max_stack_size)
-       {
+       {                                
         error("stack overflow");
         return toERROR;
        }                              
@@ -2366,6 +2377,7 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
         case toPAR:
         case toADD:
         case toSUB:
+        case toCOMMA:
         //case toPERCENT:
          percent = true;
         break;
@@ -3340,6 +3352,10 @@ float_t calculator::evaluate(char* expression, __int64 * piVal)
                                 "Function should take three arguments");
                           return qnan;
                         }
+
+                      if (v_stack[v_sp-1].tag == tvPERCENT)
+                        v_stack[v_sp-1].fval /= 100;
+
                       v_stack[v_sp-4].fval =
                         (*(float_t(*)(float_t, float_t, float_t))sym->func)
                         (v_stack[v_sp-3].get(), v_stack[v_sp-2].get(), v_stack[v_sp-1].get());
