@@ -14,6 +14,7 @@ SolidCompression=yes
 OutputDir=Setup
 OutputBaseFilename=fcalc_setup
 CreateUninstallRegKey=yes
+PrivilegesRequired=admin
 
 [Types]
 Name: "custom"; Description: "custom"; Flags:iscustom

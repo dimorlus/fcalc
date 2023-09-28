@@ -369,6 +369,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
     }
   }
 
+
  Graphics::TBitmap* bm = new Graphics::TBitmap;
  bm->Canvas->Font = MOutput->Font;
  int ww = 0;
@@ -394,6 +395,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
   }
 
  if (nn == 0) nn++;
+
  if (CalcForm->MnCalc->Enabled)
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+10+
@@ -403,7 +405,6 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+10+
             ((CBStr->Height*0.7)*(nn));
-
  SendMessage(MOutput->Handle, WM_VSCROLL, SB_TOP, 0);
  SendMessage(MOutput->Handle, WM_HSCROLL, SB_TOP, 0);
  SetOpt();
@@ -580,6 +581,18 @@ float_t menu(float_t d)
 }
 //---------------------------------------------------------------------------
 
+float_t home(float_t x, float_t y)
+{
+ if (x < 0) x = 0;
+ if (y < 0) y = 0;
+ if (x > 8192) x = 0;
+ if (y > 8192) y = 0;
+ CalcForm->Top = (int)x;
+ CalcForm->Left = (int)y;
+ return 0;
+}
+//---------------------------------------------------------------------------
+
 float_t vars(float_t d)
 {
  CalcForm->Variables1Click(NULL);
@@ -604,10 +617,30 @@ float_t BinWide(float_t d)
  CalcForm->binwide = (int)d;
  return 0;
 }
+
+//---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 void __fastcall TCalcForm::FormCreate(TObject *Sender)
 {
  ccalc = new calculator();
+#ifdef INI_FILE
+ TIniFile *ini = new TIniFile(ChangeFileExt(Application->ExeName, ".ini"));
+ Top = Reg->ReadInteger("Top");
+ Left = ini->ReadInteger("Left");
+ opacity = ini->ReadInteger("Opacity");
+ binwide = ini->ReadInteger("BinWide");
+ Options = ini->ReadInteger("Options");
+ for(int i = 0; (i < 30); i++)
+  {
+   Hist = Reg->ReadString(AnsiString().sprintf("HIST%02d", i));
+   if (Hist != "") CBStr->Items->AddObject(Hist.Trim(), NULL);
+   else break;
+  }
+ CBStr->Text = Reg->ReadString("Str").Trim();
+ CBStr->SelLength = CBStr->Text.Length();
+ delete ini;
+ Opt2Mnu();
+#else
  TRegistry *Reg = new TRegistry();
  //Vars = new TStringList();
  AnsiString Hist;
@@ -653,16 +686,19 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
   {
    delete Reg;
   }
+#endif
  ccalc->addfn("help", (void*)(float_t(*)(float_t))Help);
  ccalc->addfn("menu", (void*)(float_t(*)(float_t))menu);
  ccalc->addfn("vars", (void*)(float_t(*)(float_t))vars);
  ccalc->addfn("opacity", (void*)(float_t(*)(float_t))fOpacity);
  ccalc->addfn("binwide", (void*)(float_t(*)(float_t))BinWide);
- AlphaBlend = true;
- AlphaBlendValue = opacity;
+ ccalc->addfn2("home", (void*)(float_t(*)(float_t, float_t))home);
+ //AlphaBlend = true;
+ //AlphaBlendValue = opacity;
  Application->ShowHint = true;
  SetOpt(true);
  //SaveHist = CBStr->Items;
+
 }
 
 //---------------------------------------------------------------------------
@@ -800,6 +836,15 @@ void __fastcall TCalcForm::FormKeyDown(TObject *Sender, WORD &Key,
   {
    Key = 0;
    Close();
+  }
+ else
+ if ((Shift.Contains(ssAlt) || Shift.Contains(ssCtrl)) && (Key ==  VK_HOME))
+  {
+   Key = 0;
+   Top = 200;
+   Left = 200;
+   opacity = 255;
+   CalcForm->AlphaBlendValue = opacity;
   }
 }
 //---------------------------------------------------------------------------

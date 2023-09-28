@@ -1,6 +1,6 @@
 object CalcForm: TCalcForm
-  Left = 520
-  Top = 264
+  Left = 126
+  Top = 101
   HelpContext = 3005
   BorderIcons = [biSystemMenu, biMinimize, biMaximize, biHelp]
   BorderStyle = bsSingle
@@ -31,7 +31,7 @@ object CalcForm: TCalcForm
     Left = 0
     Top = 0
     Width = 668
-    Height = 24
+    Height = 21
     AutoComplete = False
     Anchors = [akLeft, akTop, akRight]
     Font.Charset = DEFAULT_CHARSET
@@ -40,7 +40,7 @@ object CalcForm: TCalcForm
     Font.Name = 'Courier'
     Font.Pitch = fpFixed
     Font.Style = []
-    ItemHeight = 16
+    ItemHeight = 13
     ParentFont = False
     Sorted = True
     TabOrder = 0

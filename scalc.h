@@ -212,6 +212,7 @@ class calculator
     void addivar(const char* name, int_t val);
     bool checkvar(const char* name);
     void addfn(const char* name, void *func) {add(tsFFUNC1, name, func);}
+    void addfn2(const char* name, void *func) {add(tsFFUNC2, name, func);}
     void varlist(void (*f)(char*, float_t));
     void varlist(void (*f)(char*, value*));
     float_t evaluate(char* expr, __int64 *piVal = NULL);

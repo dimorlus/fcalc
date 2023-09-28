@@ -82,7 +82,7 @@ CodePage=1200
 [Version Info Keys]
 CompanyName=Metrolight LTD
 FileDescription=Scientific formula calculator
-FileVersion=1.0.0.0
+FileVersion=1.00.0000
 InternalName=Fcalc
 LegalCopyright=Metrolight LTD
 LegalTrademarks=Copyright 2008 Dmitry Orlov.
@@ -93,27 +93,28 @@ Comments=Scientific formula calculator
 Date=08-14-08. 00:52:02
 
 [Excluded Packages]
-C:\Program Files (x86)\Borland\CBuilder6\Bin\dclclxstd60.bpl=Borland CLX Standard Components
-c:\program files (x86)\borland\cbuilder6\Projects\Bpl\dclusr60.bpl=Borland User Components
-c:\program files (x86)\borland\cbuilder6\Bin\dclbcbsmp60.bpl=Borland Sample Controls Design Time Package
 c:\program files (x86)\borland\cbuilder6\Bin\dclado60.bpl=Borland ADO DB Components
-C:\Program Files (x86)\Borland\CBuilder6\Bin\dcldb60.bpl=Borland Database Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclbde60.bpl=Borland BDE DB Components
-C:\Program Files (x86)\Borland\CBuilder6\Bin\dbx60.bpl=Borland SQL Explorer UI Package
+c:\program files (x86)\borland\cbuilder6\Bin\dcldb60.bpl=Borland Database Components
 c:\program files (x86)\borland\cbuilder6\Bin\DCLIB60.bpl=InterBase Data Access Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclcds60.bpl=Borland Base Cached ClientDataset Component
-C:\Program Files (x86)\Borland\CBuilder6\Bin\dclmid60.bpl=Borland MyBase DataAccess Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclbdecds60.bpl=Borland Local BDE ClientDataset Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclqrt60.bpl=QuickReport Components
+c:\program files (x86)\borland\cbuilder6\Bin\dcltee60.bpl=TeeChart Components
+c:\program files (x86)\borland\cbuilder6\Bin\dcldss60.bpl=Borland Decision Cube Components
+c:\program files (x86)\borland\cbuilder6\Bin\dcltqr60.bpl=TeeChart for QuickReport Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclclxdb60.bpl=Borland CLX Database Components
+c:\program files (x86)\borland\cbuilder6\Bin\dclmid60.bpl=Borland MyBase DataAccess Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclmcn60.bpl=Borland DataSnap Connection Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclsmpedit60.bpl=Borland Editor Script Enhancements
 c:\program files (x86)\borland\cbuilder6\Bin\applet60.bpl=Borland Control Panel Applet Package
+c:\program files (x86)\borland\cbuilder6\Bin\dclclxstd60.bpl=Borland CLX Standard Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclemacsedit60.bpl=Borland Editor Emacs Enhancements
 c:\program files (x86)\borland\cbuilder6\Bin\dclact60.bpl=Borland ActionBar Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclmlwiz60.bpl=Borland Markup Language Wizards
 c:\program files (x86)\borland\cbuilder6\Bin\idefilters60.bpl=IDE Filter for CPP32
 c:\program files (x86)\borland\cbuilder6\Bin\dcl31w60.bpl=Delphi 1.0 Compatibility Components
+c:\program files (x86)\borland\cbuilder6\Bin\dclbcbsmp60.bpl=Borland Sample Controls Design Time Package
 c:\program files (x86)\borland\cbuilder6\Bin\dclnet60.bpl=Borland Internet Components
 c:\program files (x86)\borland\cbuilder6\Bin\DBWEBXPRT.BPL=Borland Web Wizard Package
 c:\program files (x86)\borland\cbuilder6\Bin\DCLNMF60.bpl=NetMasters Fastnet Tools
@@ -127,24 +128,22 @@ c:\program files (x86)\borland\cbuilder6\Bin\dcldbx60.bpl=Borland dbExpress Comp
 c:\program files (x86)\borland\cbuilder6\Bin\dcldbxcds60.bpl=Borland Local DBX ClientDataset Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclindy60.bpl=Internet Direct (Indy) for D6 Property and Component Editors
 c:\program files (x86)\borland\cbuilder6\Bin\bcb2kaxserver60.bpl=Borland C++Builder COM Server Components Sample Package
-c:\program files (x86)\borland\cbuilder6\Bin\dcltee60.bpl=TeeChart Components
-c:\program files (x86)\borland\cbuilder6\Bin\dcldss60.bpl=Borland Decision Cube Components
-c:\program files (x86)\borland\cbuilder6\Bin\dcltqr60.bpl=TeeChart for QuickReport Components
-D:\PCProjects\Bpl\tmstmsc6.bpl=TMS Component Pack
 
 [HistoryLists\hlIncludePath]
-Count=4
-Item0=$(BCB)\include;$(BCB)\include\vcl
-Item1=UseHTMLHelp;ccalc;$(BCB)\include;$(BCB)\include\vcl
-Item2=ccalc;$(BCB)\include;$(BCB)\include\vcl
-Item3=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;$(BCB)\include;$(BCB)\include\vcl
+Count=5
+Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\include;$(BCB)\include\vcl
+Item1=$(BCB)\include;$(BCB)\include\vcl
+Item2=UseHTMLHelp;ccalc;$(BCB)\include;$(BCB)\include\vcl
+Item3=ccalc;$(BCB)\include;$(BCB)\include\vcl
+Item4=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;$(BCB)\include;$(BCB)\include\vcl
 
 [HistoryLists\hlLibraryPath]
-Count=4
-Item0=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc
-Item1=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
-Item2=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
-Item3=UseHTMLHelp;..\Bpl;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;xls\package\cpp6;$(BCB)\lib\obj;$(BCB)\lib
+Count=5
+Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc
+Item1=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc
+Item2=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
+Item3=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
+Item4=UseHTMLHelp;..\Bpl;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;xls\package\cpp6;$(BCB)\lib\obj;$(BCB)\lib
 
 [HistoryLists\hlDebugSourcePath]
 Count=2

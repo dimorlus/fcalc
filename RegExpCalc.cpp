@@ -547,7 +547,7 @@ void __fastcall TRegExpCalcFrm::ReDraw(TObject *Sender)
        }
       lTop += lHeight;
      }
-   Height = lTop + (LB[0][i]->Height*3);
+   Height = lTop + (LB[0][i]->Height*3)+20;
     delete RegExp;
   }
  else
@@ -595,7 +595,7 @@ void __fastcall TRegExpCalcFrm::ReDraw(TObject *Sender)
        }
       if (i==0) lTop += lHeight;
      }
-    Height = lTop + (LB[0][i]->Height*3);
+    Height = lTop + (LB[0][i]->Height*3)+20;
 
   }
  else
@@ -645,7 +645,7 @@ void __fastcall TRegExpCalcFrm::ReDraw(TObject *Sender)
        }
       if (i==0) lTop += lHeight;
      }
-    Height = lTop + (LB[0][i]->Height*3);
+    Height = lTop + (LB[0][i]->Height*3)+20;
   }
 }
 //---------------------------------------------------------------------------
