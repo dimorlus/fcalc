@@ -2269,6 +2269,7 @@ t_operator calculator::scan(bool operand, bool percent)
           return toERROR;
         }
       *np = '\0';
+      if (buf[pos+1]=='\0') return toEND;
       symbol* sym = add(tsVARIABLE, name);
       if (v_sp == max_stack_size)
         {
