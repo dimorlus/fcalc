@@ -193,19 +193,19 @@ int_t nearly_equal(double a, double b, int ignore_nbits)
     if (a == b)
         return true;
 
-    // Разбиваем числа на мантиссу и экспоненту.
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
     int a_exponent, b_exponent;
     double a_mantissa = frexp(a, &a_exponent);
     double b_mantissa = frexp(b, &b_exponent);
 
-    // Экспоненты обязаны совпасть.
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
     if (a_exponent != b_exponent)
         return false;
 
-    // Вычитаем мантиссы, образуем положительную дельту.
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.
     double delta = fabs(a_mantissa - b_mantissa);
 
-    // Определяем порог допустимой разницы.
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
     double limit = ldexp(1.0, ignore_nbits - 52);
 
     return delta < limit?1:0;
@@ -1077,7 +1077,7 @@ int_t datatime(char *tstr)
   time_t result = 0;
   int year = 0, month = 0, day = 0, hour = 0, min = 0, sec = 0;
 
-  if (sscanf(tstr, "%4d.%2d.%2d %2d:%2d:%2d", &year, &month, &day, &hour, &min, &sec))
+  if (tstr && sscanf(tstr, "%4d.%2d.%2d %2d:%2d:%2d", &year, &month, &day, &hour, &min, &sec))
    {
     struct tm breakdown = {0};
     breakdown.tm_year = year - 1900; /* years since 1900 */
@@ -1191,14 +1191,14 @@ calculator::calculator(int cfg)
 
   addfvar("pi", M_PI);
   addfvar("e", M_E);
-  addivar("max32", 0x7fffffff);
-  addivar("maxint", 0x7fffffff);
-  addivar("maxu32", 0xffffffff);
-  addivar("maxuint", 0xffffffff);
-  addivar("max64", 0x7fffffffffffffffL);
-  addivar("maxlong", 0x7fffffffffffffffL);
-  addivar("maxu64", 0xffffffffffffffffL);
-  addivar("maxulong", 0xffffffffffffffffL);
+  addlvar("max32", 2147483647.0, 0x7fffffff); 
+  addlvar("maxint", 2147483647.0, 0x7fffffff); 
+  addlvar("maxu32", 4294967295.0, 0xffffffff); 
+  addlvar("maxuint", 4294967295.0, 0xffffffff); 
+  addlvar("max64", 9223372036854775807.0, 0x7fffffffffffffffull);
+  addlvar("maxlong", 9223372036854775807.0, 0x7fffffffffffffffull);
+  addlvar("maxu64", 18446744073709551615.0, 0xffffffffffffffffull);
+  addlvar("maxulong", 18446744073709551615.0, 0xffffffffffffffffull);
   addivar("timezone", -_timezone/3600);
   addivar("daylight", _daylight);
   addivar("tz", _daylight-_timezone/3600);
@@ -1225,6 +1225,34 @@ calculator::~calculator(void)
     }
   }
 }
+
+int calculator::varlist(char* buf, int bsize, int* maxlen)
+{
+    char *cp = buf;
+    symbol* sp;
+    int lineCount = 0;
+    int localMax = 0;
+    for (int i = 0; i < hash_table_size; i++)
+    {
+        if ((sp = hash_table[i]) != NULL)
+        {
+            do
+            {
+              if (sp->tag == tsVARIABLE)
+              {
+                int written = snprintf(cp, bsize - (cp - buf), "%-10s = %-.5Lg\r\n", sp->name, (float_t)sp->val.fval);
+                if (written > localMax) localMax = written;
+                cp += written;
+                lineCount++;
+              }
+              sp = sp->next;
+            } while (sp);
+        }
+    }
+    if (maxlen) *maxlen = localMax;
+    return lineCount;
+}
+
 
 void calculator::varlist(void (*f)(char*, float_t))
 {
@@ -1315,11 +1343,46 @@ symbol* calculator::add(t_symbol tag, const char* name, void* func)
   return sp;
 }
 
+symbol* calculator::find(t_symbol tag, const char* name, void* func)
+{
+    char* uname = strdup(name);
+
+    unsigned h = string_hash_function(uname) % hash_table_size;
+    symbol* sp;
+    for (sp = hash_table[h]; sp != NULL; sp = sp->next)
+    {
+        if (scfg & UPCASE)
+        {
+          if (stricmp(sp->name, uname) == 0) return sp;
+        }
+        else
+        {
+          if (strcmp(sp->name, uname) == 0) return sp;
+        }
+    }
+    return NULL;
+}
+
 void calculator::addfvar(const char* name, float_t val)
 {
  symbol* sp = add(tsVARIABLE, name);
  sp->val.tag = tvFLOAT;
  sp->val.fval = val;
+}
+
+void calculator::addivar(const char* name, int_t val)
+{
+    symbol* sp = add(tsVARIABLE, name);
+    sp->val.tag = tvINT;
+    sp->val.ival = val;
+}
+
+void calculator::addlvar(const char* name, float_t fval, int_t ival)
+{
+    symbol* sp = add(tsVARIABLE, name);
+    sp->val.tag = tvINT;
+    sp->val.fval = fval;
+    sp->val.ival = ival;    
 }
 
 bool calculator::checkvar(const char* name)
@@ -1346,12 +1409,7 @@ bool calculator::checkvar(const char* name)
   return false;
 }
 
-void calculator::addivar(const char* name, int_t val)
-{
- symbol* sp = add(tsVARIABLE, name);
- sp->val.tag = tvINT;
- sp->val.ival = val;
-}
+
 
 int calculator::hscanf(char* str, int_t &ival, int &nn)
 {
@@ -1755,7 +1813,7 @@ t_operator calculator::scan(bool operand, bool percent)
 {
   char name[max_expression_length], *np;
 
-  while (isspace(buf[pos])) pos += 1;
+  while (isspace(buf[pos]&0x7f)) pos += 1;
   switch (buf[pos++])
     {
     case '\0':
@@ -2002,8 +2060,7 @@ t_operator calculator::scan(bool operand, bool percent)
     case '\'':
      {
       int_t ival;
-      char *ipos, *fpos;
-      wchar_t wc;
+      char* ipos;
       int n = 0;
 
       if (buf[pos] == '\\')
@@ -2089,8 +2146,7 @@ t_operator calculator::scan(bool operand, bool percent)
     case 'L':
      {
       int_t ival;
-      char *ipos, *fpos;
-      wchar_t wc;
+      char* ipos;
       int n = 0;
 
       if (buf[pos] == '\'')
@@ -2142,7 +2198,7 @@ t_operator calculator::scan(bool operand, bool percent)
 #endif /*_WCHAR_*/
     case '"':
      {
-       char *ipos, *fpos;
+       char* ipos;
        char sbuf[STRBUF];
        int sidx = 0;
        ipos = buf+pos;
@@ -2170,8 +2226,8 @@ t_operator calculator::scan(bool operand, bool percent)
     case '.': case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case '\\': case '$':
      {
-      int_t ival;
-      float_t fval;
+      int_t ival = 0;
+      float_t fval = 0;
       int ierr = 0, ferr;
       char *ipos, *fpos;
       int n = 0;
@@ -2258,7 +2314,7 @@ t_operator calculator::scan(bool operand, bool percent)
     def:
       pos -= 1;
       np = name;
-      while (isalnum(buf[pos]) || buf[pos] == '@' ||
+      while (isalnum(buf[pos]&0x7f) || buf[pos] == '@' ||
              buf[pos] == '_' || buf[pos] == '?')
         {
           *np++ = buf[pos++];
@@ -2269,17 +2325,22 @@ t_operator calculator::scan(bool operand, bool percent)
           return toERROR;
         }
       *np = '\0';
-      if (buf[pos+1]=='\0') return toEND;
-      symbol* sym = add(tsVARIABLE, name);
+      symbol* sym;
+      if (buf[pos] == '\0') sym = find(tsVARIABLE, name); 
+      else sym = add(tsVARIABLE, name);
       if (v_sp == max_stack_size)
         {
           error("stack overflow");
           return toERROR;
         }
+      if (sym)
+        {
       v_stack[v_sp] = sym->val;
       v_stack[v_sp].pos = pos;
       v_stack[v_sp++].var = sym;
       return (sym->tag == tsVARIABLE) ? toOPERAND : toFUNC;
+    }
+      else return toOPERAND;
     }
 }
 

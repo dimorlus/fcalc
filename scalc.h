@@ -58,6 +58,44 @@ typedef double float_t;
 class value;
 class symbol;
 
+#pragma pack(push, 1)
+typedef union
+{
+    int options;
+    struct
+    {
+        int pas:1;
+        int sci:1;
+        int upcase:1;
+        int utmp:1;
+        int ffloat:1;
+        int deg:1;
+        int scf:1;
+        int eng:1;
+        int str:1;
+        int hex:1;
+        int oct:1;
+        int fbin:1;
+        int dat:1;
+        int chr:1;
+        int wch:1;
+        int esc:1;
+        int cmp:1;
+        int nrm:1;
+        int igr:1;
+        int uns:1;
+        int all:1;
+        int min:1;
+        int mnu:1;
+        int utm:1;
+        int frc:1;
+        int fri:1;
+        int aut:1;
+    };
+} toptions;
+#pragma pack(pop)
+
+
 enum t_value
 {
   tvINT,
@@ -123,7 +161,10 @@ class value
     inline value()
      {
       tag = tvINT;
+      var = NULL;
       ival = 0;
+      fval = 0;
+      pos = 0;
       sval = NULL;
      }
 
@@ -161,6 +202,14 @@ class symbol
     value    val;
     char*    name;
     symbol*  next;
+
+ inline symbol()
+     {
+      tag = tsVARIABLE;
+      func = NULL;
+      name = NULL;
+      next = NULL;
+ }
 };
 
 
@@ -188,6 +237,7 @@ class calculator
 
     inline unsigned string_hash_function(char* p);
     symbol* add(t_symbol tag, const char* name, void* func = NULL);
+    symbol* find(t_symbol tag, const char* name, void* func = NULL);
     t_operator scan(bool operand, bool percent);
     void  error(int pos, const char* msg);
     inline void  error(const char* msg) {error(pos-1, msg);}
@@ -210,11 +260,13 @@ class calculator
     inline int errps(void) {return errpos;};
     void addfvar(const char* name, float_t val);
     void addivar(const char* name, int_t val);
+    void addlvar(const char* name, float_t fval, int_t ival);
     bool checkvar(const char* name);
     void addfn(const char* name, void *func) {add(tsFFUNC1, name, func);}
     void addfn2(const char* name, void *func) {add(tsFFUNC2, name, func);}
     void varlist(void (*f)(char*, float_t));
     void varlist(void (*f)(char*, value*));
+    int varlist(char* buf, int bsize, int* maxlen = NULL);
     float_t evaluate(char* expr, __int64 *piVal = NULL);
     char *Sres(void) {return sres;};
     ~calculator(void);

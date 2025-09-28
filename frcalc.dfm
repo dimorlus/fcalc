@@ -52,9 +52,9 @@ object CalcForm: TCalcForm
   end
   object MOutput: TMemo
     Left = 0
-    Top = 27
+    Top = 23
     Width = 667
-    Height = 230
+    Height = 233
     HelpContext = 3005
     Anchors = [akLeft, akTop, akRight, akBottom]
     Font.Charset = DEFAULT_CHARSET
