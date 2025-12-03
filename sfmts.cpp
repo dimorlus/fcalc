@@ -14,16 +14,12 @@
 #include "scalc.h"
 #include "sfmts.h"
 
-//---------------------------------------------------------------------------
-
 #pragma package(smart_init)
 #pragma warn -8008 // Condition is always true
 #pragma warn -8066 // Unreachable code
 
-int _matherr(struct _exception *e)
-{
-  return 1;             /* error has been handled */
-}
+//---------------------------------------------------------------------------
+
 
 //----------------------------------
 int ones(unsigned char *cp, int from, int to)
@@ -35,7 +31,7 @@ int ones(unsigned char *cp, int from, int to)
 }
 //---------------------------------------------------------------------------
 
-bool isNan(float_t d)
+bool isNan(float__t d)
 {
  int fr, ex;
  if (d < 0) d = -d;
@@ -63,21 +59,21 @@ bool isNan(float_t d)
 }
 //---------------------------------------------------------------------------
 
-const unsigned __int64 dms[] =
-   {(60i64*60*60*24*365.25*100i64),(60i64*60*24*365.25),
-    (60i64*60*24), (60i64*60), 60i64, 1i64};
+const __int64 dms[] =
+   {(60ull*60*60*24*36525ull),(6ull*6*24*36525),
+    (60ull*60*24), (60ull*60), 60ull, 1ull};
 
 int t2str(char *str, __int64 sec)
 {
  const char * fmt[] =
-   {"%d:c ", "%d:y ", "%d:d ", "%d:h ", "%d:m ", "%d:s "};
- unsigned int pt[6];
+   {"%lld:c ", "%lld:y ", "%lld:d ", "%lld:h ", "%lld:m ", "%lld:s "};
+ __int64 pt[6];
  int i, j, k;
  char *pc = str;
 
  for(i = 0, j = -1, k = 0; i < 6; i++)
   {
-    pt[i] = (unsigned int)(sec / dms[i]);
+    pt[i] = (__int64)(sec / dms[i]);
     sec %= dms[i];
     if ((j == -1) && (pt[i] != 0)) j = i;
     if ((j != -1) && (pt[i] != 0)) k = i;
@@ -92,15 +88,15 @@ int t2str(char *str, __int64 sec)
 //---------------------------------------------------------------------------
 
 /* convert int to bin according format %10b */
-int b2str(char *str, const char *fmt, unsigned __int64 b)
+int b2str(char *str, const char *fmt, __int64 b)
 {
   char c;
   bool flag = false;
-  int j = 0;
-  char *ws;
-  int wide;
-  int i,w;
-  unsigned __int64 mask;
+  unsigned int j = 0;
+  char *ws = NULL;
+  unsigned int wide;
+  unsigned int i,w=0;
+  __int64 mask;
 
   while(0 != (c = *fmt++))
    {
@@ -116,12 +112,11 @@ int b2str(char *str, const char *fmt, unsigned __int64 b)
         else break;
        }
 
-      mask = 1i64 << 63;
-      //for(w = 64; ((w > 0) && (mask > 1) && ((b & mask) == 0)); w--) mask >>=1;
+      mask = 1ull << 63;
       for(w = wide; ((w > 0) && (mask > 1) && ((b & mask) == 0)); w--) mask >>=1;
       if (wide <= w) wide = w;
 
-      mask = 1i64 << (wide-1);
+      mask = 1ull << (wide-1);
       for(i = 0; i < wide; i++)
        {
         if (b & mask) str[j++] = '1';
@@ -138,7 +133,7 @@ int b2str(char *str, const char *fmt, unsigned __int64 b)
 }
 //---------------------------------------------------------------------------
 
-int d2scistr(char *str, float_t d)
+int d2scistr(char *str, float__t d)
 {
  const char csci[] = {'y', 'z', 'a', 'f', 'p', 'n', 'u', 'm', ' ',
                       'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
@@ -149,9 +144,9 @@ int d2scistr(char *str, float_t d)
  else
   {
    #ifdef _long_double_
-   float_t dd = fabsl(d);
+   float__t dd = fabsl(d);
    #else /*_long_double_*/
-   float_t dd = fabs(d);
+   float__t dd = fabs(d);
    #endif /*_long_double_*/
    int rng = empty;
    if (dd > 0)
@@ -191,15 +186,15 @@ int d2scistr(char *str, float_t d)
 }
 //---------------------------------------------------------------------------
 
-int d2nrmstr(char *str, float_t d)
+int d2nrmstr(char *str, float__t d)
 {
  if (isNan(d)) return sprintf(str, "%e", d);
  else
   {
    #ifdef _long_double_
-   float_t dd = fabsl(d);
+   float__t dd = fabsl(d);
    #else /*_long_double_*/
-   float_t dd = fabs(d);
+   float__t dd = fabs(d);
    #endif /*_long_double_*/
    int rng = 0;
    if (dd > 0)
@@ -208,11 +203,13 @@ int d2nrmstr(char *str, float_t d)
       {
        rng++;
        dd /= 1000;
+	   if (rng > 308) break;
       }
      while (dd < 1)
       {
        rng--;
        dd *= 1000;
+	   if (rng < -308) break;
       }
     }
    if (d < 0) dd = -dd;
@@ -227,7 +224,7 @@ int d2nrmstr(char *str, float_t d)
 }
 //---------------------------------------------------------------------------
 
-int b2scistr(char *str, float_t d)
+int b2scistr(char *str, float__t d)
 {
  const char csci_plus[] =  {' ', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
  enum {Empty, Kilo, Mega, Giga, Tera, Peta, Exa, Zetta, Yotta};
@@ -236,14 +233,14 @@ int b2scistr(char *str, float_t d)
  else
   {
    #ifdef _long_double_
-   float_t dd = fabsl(d);
+   float__t dd = fabsl(d);
    #else /*_long_double_*/
-   float_t dd = fabs(d);
+   float__t dd = fabs(d);
    #endif /*_long_double_*/
    int rng = Empty;
    if (dd > 0)
     {
-     while (dd >= 1024)
+     while ((rng <= Yotta)&&(dd >= 1024))
       {
        rng++;
        dd /= 1024;
@@ -265,29 +262,36 @@ int b2scistr(char *str, float_t d)
   }
 }
 //---------------------------------------------------------------------------
-
-int dgr2str(char *str, float_t d)
+int dgr2str(char* str, float__t radians)
 {
- const char cdeg[] = {96, 39, 34}; //` - degrees, ' - minutes, " - seconds
- const float_t mdeg[] = {M_PI/180.0, M_PI/(180.0*60), M_PI/(180.0*60*60)};
- unsigned int pt[6];
- int i, j, k;
- char *pc = str;
+	const char cdeg[] = { 96, 39, 34 }; // ` ' "
+	double degrees = radians * 180.0 / M_PI;
+	int deg = (int)degrees;
+	double min_full = (degrees - deg) * 60.0;
+	int min = (int)min_full;
+	double sec_full = (min_full - min) * 60.0;
+	int sec = (int)(sec_full + 0.5); // Округляем секунды
 
- for(i = 0, j = -1, k = 0; i < 3; i++)
-  {
-    pt[i] = (unsigned int)(d / mdeg[i]);
-    d = fmod(d, mdeg[i]);
-    if ((j == -1) && (pt[i] != 0)) j = i;
-    if ((j != -1) && (pt[i] != 0)) k = i;
-  }
- *str = '\0';
- if (j == -1) str += sprintf(str, "0%c",cdeg[2]);
- else
- for(i = j; i <= k; i++)
-   str += sprintf(str, "%d%c", pt[i], cdeg[i]);
- return str-pc;
+	// Корректируем переполнение секунд и минут
+	if (sec == 60) {
+		sec = 0;
+		min += 1;
+	}
+	if (min == 60) {
+		min = 0;
+		deg += 1;
+	}
+
+	// Формируем строку
+	if (deg != 0)
+		return sprintf(str, "%d%c%d%c%d%c", deg, cdeg[0], min, cdeg[1], sec, cdeg[2]);
+	else if (min != 0)
+		return sprintf(str, "%d%c%d%c", min, cdeg[1], sec, cdeg[2]);
+	else
+		return sprintf(str, "%d%c", sec, cdeg[2]);
 }
+
+
 //---------------------------------------------------------------------------
 
 int chr2str(char *str, unsigned char c)
@@ -314,6 +318,18 @@ int chr2str(char *str, unsigned char c)
  else return sprintf(str, "'%c'", c);
 }
 //---------------------------------------------------------------------------
+int wchr2str1(char *str, int i)
+{
+ wchar_t wbuf[2];
+ char cbuf[8];
+
+ wbuf[0] = (wchar_t)i&0xffff;
+ wbuf[1] = L'\0';
+
+ // Заменяем WideCharToMultiByte на стандартную функцию
+ wcstombs(cbuf, wbuf, sizeof(cbuf));
+ return sprintf(str, "'%s'W", cbuf);
+}
 
 int wchr2str(char *str, int i)
 {
@@ -324,40 +340,31 @@ int wchr2str(char *str, int i)
   wbuf[0] = *(wchar_t *)&i;
   wbuf[1] = L'\0';
 
-
-  WideCharToMultiByte(CP_OEMCP, 0, wbuf, -1,
-               (LPSTR)cbuf, 4, NULL, NULL);
+  if (i == '\t') cbuf[0] = ' ', cbuf[1] = '\0'; 
+  else WideCharToMultiByte(CP_OEMCP, 0, wbuf, -1, (LPSTR)cbuf, 4, NULL, NULL);
   return sprintf(str, "'%s'W", cbuf);
 #else /*_WIN_*/
  *str = '\0';
  return 0;
 #endif  /*_WIN_*/
 }
-//---------------------------------------------------------------------------
-
-//   https://support.microsoft.com/en-us/help/167296/how-to-convert-a-unix-time-t-to-a-win32-filetime-or-systemtime
-//   #include <winbase.h>
-//   #include <winnt.h>
-//   #include <time.h>
-//
-//   void UnixTimeToFileTime(time_t t, LPFILETIME pft)
-//   {
-//     // Note that LONGLONG is a 64-bit value
-//     LONGLONG ll;
-//
-//     ll = Int32x32To64(t, 10000000) + 116444736000000000;
-//     pft->dwLowDateTime = (DWORD)ll;
-//     pft->dwHighDateTime = ll >> 32;
-//   }
 
 int nx_time2str(char *str, __int64 time)
 {
- struct tm t = *gmtime((time_t*)&time);
- return strftime(str, 80, "%a, %b %d %H:%M:%S %Y", &t);
- //return sprintf(str, "%s", ctime((time_t*)&time));
-}
-//---------------------------------------------------------------------------
+  struct tm t;
 
+  if (time > 0x7FFFFFFF) // 2147483647 signed 32-bit (19 Jan 2038)
+  {
+
+    strcpy(str, "Date overflow (>2038)");
+    return (int)strlen(str);
+  }
+  
+  //time_t safe_time = (time_t)time;
+  //gmtime_s(&t, &safe_time);
+  t = *gmtime((time_t*)&time);
+  return (int)strftime(str, 80, "%a, %b %d %H:%M:%S %Y", &t);
+}
 
 void fraction(double val, double eps, int &num, int &denum)
 {
@@ -418,7 +425,7 @@ void fraction(double val, double eps, int &num, int &denum)
 }
 //---------------------------------------------------------------------------
 
-int d2frcstr(char *str, float_t d, int eps_order)
+int d2frcstr(char *str, float__t d, int eps_order)
 {
  int num, denum;
  double val;
@@ -450,4 +457,3 @@ int d2frcstr(char *str, float_t d, int eps_order)
   }
 }
 //---------------------------------------------------------------------------
-

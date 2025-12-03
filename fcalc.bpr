@@ -5,7 +5,7 @@
     <VERSION value="BCB.06.00"/>
     <PROJECT value="fcalc.exe"/>
     <OBJFILES value="fcalc.obj sfmts.obj ViewVars.obj scalc.obj HTMLHelpViewer.obj 
-      UseHTMLHelp.obj StrUtils.obj frcalc.obj"/>
+      UseHTMLHelp.obj StrUtils.obj frcalc.obj sfunc.obj"/>
     <RESFILES value="fcalc.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -27,7 +27,7 @@
     <SYSDEFINES value="NO_STRICT"/>
     <MAINSOURCE value="fcalc.cpp"/>
     <INCLUDEPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;$(BCB)\include;$(BCB)\include\vcl"/>
-    <LIBPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc"/>
+    <LIBPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
@@ -59,6 +59,7 @@
       <FILE FILENAME="StrUtils.cpp" FORMNAME="" UNITNAME="StrUtils" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="hhctrl.lib" FORMNAME="" UNITNAME="hhctrl.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="frcalc.cpp" FORMNAME="CalcForm" UNITNAME="frcalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="sfunc.cpp" FORMNAME="" UNITNAME="sfunc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
@@ -139,10 +140,10 @@ Item4=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;$(BCB)\in
 
 [HistoryLists\hlLibraryPath]
 Count=5
-Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc
-Item1=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\ecalc
-Item2=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
-Item3=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
+Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
+Item1=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
+Item2=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
+Item3=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
 Item4=UseHTMLHelp;..\Bpl;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;xls\package\cpp6;$(BCB)\lib\obj;$(BCB)\lib
 
 [HistoryLists\hlDebugSourcePath]
@@ -155,7 +156,7 @@ Count=1
 Item0=_DEBUG
 
 [Debugging]
-DebugSourceDirs=$(BCB)\source\vcl;D:\PCProjects\apf241\
+DebugSourceDirs=$(BCB)\source\vcl
 
 [Parameters]
 RunParams=

@@ -9,6 +9,12 @@
 #ifndef scalcH
 #define scalcH
 
+#ifndef _WIN32
+#include <minwindef.h>
+#endif
+
+#include <cstdlib>  // for free() function
+
 // RW - set both by calc engine and application
 // WO - set only from application
 // RO - set only by calc engine
@@ -26,6 +32,7 @@
 #define HEX     (1<<9)  // (RO) Hex format found
 #define OCT     (1<<10) // (RO) Octal format found
 #define fBIN    (1<<11) // (RO) Binary format found
+#define FBIN    (1<<11) // (RO) Binary format found
 #define DAT     (1<<12) // (RO) Date time format found
 #define CHR     (1<<13) // (RO) Char format found
 #define WCH     (1<<14) // (RO) WChar format found
@@ -42,18 +49,20 @@
 #define FRC     (1<<24) // (UI) Fraction output
 #define FRI     (1<<25) // (UI) Fraction inch output
 #define AUTO    (1<<26) // (UI) Auto output
+#define AUT     (1<<26) // (UI) Auto output
+#define TOP     (1<<27) // (UI) Always on top
+#define IMUL	(1<<28) // (WO) Implicit multiplication
 #define STRBUF  256     // bufer size for string operations
 
 #define _WCHAR_         // L'c' and 'c'W input format allow
 
 #define _long_double_
-
 typedef __int64 int_t;
 typedef unsigned __int64 unsigned_t;
 #ifdef _long_double_
-typedef long double float_t;
+typedef long double float__t;
 #else
-typedef double float_t;
+typedef double float__t;
 #endif
 class value;
 class symbol;
@@ -91,6 +100,8 @@ typedef union
         int frc:1;
         int fri:1;
         int aut:1;
+        int top:1;
+	int imul:1;
     };
 } toptions;
 #pragma pack(pop)
@@ -101,6 +112,7 @@ enum t_value
   tvINT,
   tvFLOAT,
   tvPERCENT,
+  tvCOMPLEX,
   tvSTR
 };
 
@@ -127,19 +139,65 @@ enum t_operator
 };
 
 #define BINARY(opd) (opd >= toPOW)
+#define UNARY(opd) ((opd >= toPOSTINC) && (opd <= toCOM))
 
 enum t_symbol
 {
   tsVARIABLE,
-  tsIFUNC1, //int f(int x)
-  tsIFUNC2, //int f(int x, int y)
-  tsFFUNC1, //float f(float x)
-  tsFFUNC2, //float f(float x, float y)
-  tsFFUNC3,//float f(float x, float y, float z)
-  tsIFFUNC3,//int f(float x, float y, int z)
-  tsPFUNCn, //int printf(char *format, ...)
-  tsSIFUNC1 //int f(char *s)
+  tsIFUNC1,  //int f(int x)
+  tsIFUNC2,  //int f(int x, int y)
+  tsFFUNC1,  //float f(float x)
+  tsCFUNCC1, //complex f(complex x)
+  tsFFUNCC1, //float f(complex x)
+  tsFFUNC2,  //float f(float x, float y)
+  tsFFUNC3,  //float f(float x, float y, float z)
+  tsIFFUNC3, //int f(float x, float y, int z)
+  tsPFUNCn,  //int printf(char *format, ...)
+  tsSIFUNC1, //int f(char *s)
+  tsVFUNC1,  // void vfunc(value* res, value* arg, int idx)
+  tsVFUNC2,  // void vfunc(value* res, value* arg1, value* arg2, int idx)
+  tsNUM
 };
+
+enum v_func
+{
+ vf_abs,
+ vf_pol,
+
+ vf_sin,
+ vf_cos,
+ vf_tan,
+ vf_cot,
+
+ vf_sinh,
+ vf_cosh,
+ vf_tanh,
+ vf_ctnh,
+
+ vf_asin,
+ vf_acos,
+ vf_atan,
+ vf_acot,
+
+ vf_asinh,
+ vf_acosh,
+ vf_atanh,
+ vf_acoth,
+
+ vf_exp,
+ vf_log,
+ vf_sqrt,
+
+ vf_pow,
+ vf_rootn,
+ vf_logn,
+
+ vf_re,
+ vf_im,
+ vf_cplx,
+
+ vf_num
+ };
 
 class value
 {
@@ -147,14 +205,11 @@ class value
     t_value tag;
     symbol* var;
     int     pos;
-    #ifdef _long_double_
     struct
-    #else /*_long_double_*/
-    union
-    #endif /*_long_double_*/
      {
       int_t  ival;
-      float_t fval;
+      float__t fval;
+      float__t imval;
      };
     char *sval;
 
@@ -163,7 +218,8 @@ class value
       tag = tvINT;
       var = NULL;
       ival = 0;
-      fval = 0;
+      fval = 0.0;
+      imval = 0.0;
       pos = 0;
       sval = NULL;
      }
@@ -173,12 +229,13 @@ class value
       if ((tag == tvSTR) && sval) free(sval);
       sval = NULL;
      }
-    inline float_t get()
+
+    inline float__t get()
     {
-      return tag == tvINT ? (float_t)ival : fval;
+      return tag == tvINT ? (float__t)ival : fval;
     }
 
-    inline float_t get_dbl()
+    inline float__t get_dbl()
     {
       return tag == tvINT ? (double)ival : (double)fval;
     }
@@ -198,6 +255,7 @@ class symbol
 {
   public:
     t_symbol tag;
+    v_func   fidx;
     void*    func;
     value    val;
     char*    name;
@@ -206,10 +264,11 @@ class symbol
  inline symbol()
      {
       tag = tsVARIABLE;
+	  fidx = vf_num;
       func = NULL;
       name = NULL;
       next = NULL;
- }
+     }
 };
 
 
@@ -218,6 +277,7 @@ const int max_expression_length = 1024;
 
 const int hash_table_size = 1013;
 
+typedef void (*complex_func_t)(long double re, long double im, long double& out_re, long double& out_im);
 
 class calculator
 {
@@ -226,7 +286,7 @@ class calculator
     value v_stack[max_stack_size];
     symbol* hash_table[hash_table_size];
     int   v_sp;
-    int   o_stack[max_stack_size];
+    t_operator o_stack[max_stack_size];
     int   o_sp;
     char* buf;
     int   pos;
@@ -234,10 +294,12 @@ class calculator
     char  err[256];
     char  sres[STRBUF];
     int   errpos;
+    char c_imaginary;
 
     inline unsigned string_hash_function(char* p);
     symbol* add(t_symbol tag, const char* name, void* func = NULL);
-    symbol* find(t_symbol tag, const char* name, void* func = NULL);
+    symbol* add(t_symbol tag, v_func fidx, const char* name, void* func=NULL);
+    symbol* find(const char* name, void* func = NULL);
     t_operator scan(bool operand, bool percent);
     void  error(int pos, const char* msg);
     inline void  error(const char* msg) {error(pos-1, msg);}
@@ -247,10 +309,10 @@ class calculator
     int bscanf(char* str, int_t &ival, int &nn);
     int oscanf(char* str, int_t &ival, int &nn);
     int xscanf(char* str, int len, int_t &ival, int &nn);
-    float_t dstrtod(char *s, char **endptr);
-    float_t tstrtod(char *s, char **endptr);
-    void engineering(float_t mul, char * &fpos, float_t &fval);
-    void scientific(char * &fpos, float_t &fval);
+    float__t dstrtod(char *s, char **endptr);
+    float__t tstrtod(char *s, char **endptr);
+    void engineering(float__t mul, char * &fpos, float__t &fval);
+    void scientific(char * &fpos, float__t &fval);
 
   public:
     calculator(int cfg = PAS + SCI + UPCASE);
@@ -258,17 +320,18 @@ class calculator
     inline int issyntax(void) {return scfg;}
     inline char *error(void) {return err;}
     inline int errps(void) {return errpos;};
-    void addfvar(const char* name, float_t val);
+    void addfvar(const char* name, float__t val);
     void addivar(const char* name, int_t val);
-    void addlvar(const char* name, float_t fval, int_t ival);
-    bool checkvar(const char* name);
+    void addlvar(const char* name, float__t fval, int_t ival);
     void addfn(const char* name, void *func) {add(tsFFUNC1, name, func);}
     void addfn2(const char* name, void *func) {add(tsFFUNC2, name, func);}
-    void varlist(void (*f)(char*, float_t));
-    void varlist(void (*f)(char*, value*));
     int varlist(char* buf, int bsize, int* maxlen = NULL);
-    float_t evaluate(char* expr, __int64 *piVal = NULL);
+    float__t evaluate(char* expr, __int64 *piVal = NULL, float__t *pimval = NULL);
     char *Sres(void) {return sres;};
+	char Ichar(void) { return c_imaginary; };
+    int format_out(int Options, int binwide, int n, float__t fVal, float__t imVal,
+        __int64 iVal, char* expr, char strings[20][80]);
+
     ~calculator(void);
 };
 
@@ -277,6 +340,7 @@ extern bool IsNaNL(const long double ldVal);
 #define isnan(a) (a != a)
 
 #endif
+
 
 
 

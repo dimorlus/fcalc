@@ -104,6 +104,7 @@ private:	// User declarations
         calculator *ccalc;
         //TStrings* SaveHist;
         long double fVal;
+        long double imVal;
         void __fastcall SetOpt(bool forced = false);
         void __fastcall AddHist(void);
         void __fastcall Opt2Mnu(void);

@@ -14,33 +14,27 @@ BCB = $(MAKEDIR)\..
 VERSION = BCB.06.00
 # ---------------------------------------------------------------------------
 PROJECT = fcalc.exe
-OBJFILES = frcalc.obj fcalc.obj sfmts.obj ViewVars.obj scalc.obj HTMLHelpViewer.obj \
-    UseHTMLHelp.obj StrUtils.obj
+OBJFILES = fcalc.obj sfmts.obj ViewVars.obj scalc.obj HTMLHelpViewer.obj \
+    UseHTMLHelp.obj StrUtils.obj frcalc.obj sfunc.obj
 RESFILES = fcalc.res
 MAINSOURCE = fcalc.cpp
-RESDEPEN = $(RESFILES) frcalc.dfm fcalc.dfm ViewVars.dfm
+RESDEPEN = $(RESFILES) fcalc.dfm ViewVars.dfm frcalc.dfm
 LIBFILES = hhctrl.lib
 IDLFILES = 
 IDLGENFILES = 
 LIBRARIES = rtl.lib vcl.lib
-PACKAGES = vcl.bpi rtl.bpi dbrtl.bpi adortl.bpi vcldb.bpi vclx.bpi bdertl.bpi \
-    vcldbx.bpi ibxpress.bpi dsnap.bpi cds.bpi bdecds.bpi teeui.bpi teedb.bpi \
-    tee.bpi dss.bpi teeqr.bpi visualclx.bpi visualdbclx.bpi dsnapcrba.bpi \
-    dsnapcon.bpi bcbsmp.bpi vclie.bpi xmlrtl.bpi inet.bpi inetdbbde.bpi \
-    inetdbxpress.bpi inetdb.bpi nmfast.bpi webdsnap.bpi bcbie.bpi websnap.bpi \
-    soaprtl.bpi dclocx.bpi dbexpress.bpi dbxcds.bpi indy.bpi bcb2kaxserver.bpi \
-    BC100R61.bpi BCDB100R61.bpi qrpt.bpi bcqr100r61.bpi aprdlgs60.bpi \
-    XLSRWII20_CPP6.bpi
+PACKAGES = vcl.bpi rtl.bpi vclx.bpi BC100R61.bpi BCDB100R61.bpi bcqr100r61.bpi \
+    aprdlgs60.bpi XLSRWII20_CPP6.bpi
 SPARELIBS = vcl.lib rtl.lib
 DEFFILE = 
 OTHERFILES = 
 # ---------------------------------------------------------------------------
 DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
-USERDEFINES = 
+USERDEFINES = _DEBUG
 SYSDEFINES = NO_STRICT
-INCLUDEPATH = UseHTMLHelp;ccalc;$(BCB)\include;$(BCB)\include\vcl
-LIBPATH = $(BCB)\lib;$(BCB)\lib\obj;..\Bpl;D:\PCProjects\TesterIV;D:\PCProjects\TesterIV\UseHTMLHelp
+INCLUDEPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\include;$(BCB)\include\vcl
+LIBPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
 WARNINGS= -w-par
 PATHCPP = .;
 PATHASM = .;
@@ -48,13 +42,14 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a1 -b- -k- -vi -c -tW -tWM
-IDLCFLAGS = -IUseHTMLHelp -Iccalc -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix \
-    cpp -boa
-PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
+CFLAG1 = -Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a1 -b- -k -y -v -vi- -c \
+    -tW -tWM
+IDLCFLAGS = -I"C:\Program Files (x86)\Borland\CBuilder6\Projects" -I$(BCB)\include \
+    -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
+PFLAGS = -$Y+ -$W -$O- -$A8 -v -JPHNE -M
 RFLAGS = 
-AFLAGS = /mx /w2 /zn
-LFLAGS = -D"" -aa -Tpe -x -Gn
+AFLAGS = /mx /w2 /zi
+LFLAGS = -D"" -aa -Tpe -x -Gn -v
 # ---------------------------------------------------------------------------
 ALLOBJ = c0w32.obj sysinit.obj $(OBJFILES)
 ALLRES = $(RESFILES)

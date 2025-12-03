@@ -65,6 +65,7 @@ static void GetVars(char *Name, float_t fVal)
 }
 */
 //---------------------------------------------------------------------------
+#define USE_calculator_format_out
 void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 {
  __int64 iVal;
@@ -79,7 +80,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
  Application->Title = CBStr->Text;
 
  Binarywidth->Caption = AnsiString().sprintf("Binary width = %u", binwide);
- float_t op = 100.0*(float_t)opacity/255.0;
+ float__t op = 100.0*(float__t)opacity/255.0;
  Opacity->Caption = AnsiString().sprintf("Opacity(%-1.0Lf)", op);
 
 // SetExceptionMask(exAllArithmeticExceptions);
@@ -87,13 +88,18 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 //  SetExceptionMask(GetExceptionMask() << exZeroDivide << exInvalidOp << exDenormalized << exOverflow << exUnderflow << exPrecision);
  try
   {
-   fVal = ccalc->evaluate(CBStr->Text.c_str(), &iVal);
+   fVal = ccalc->evaluate(CBStr->Text.c_str(), &iVal, &imVal);
   }
  catch ( ... )
   {
   }
 
  int scfg = ccalc->issyntax();
+#ifdef USE_calculator_format_out
+ n = ccalc->format_out(Options,  binwide, n,
+               fVal, imVal, iVal, CBStr->Text.c_str(), strings);
+#else
+
  if (IsNaN(fVal))
   {
    if (ccalc->error()[0])
@@ -279,7 +285,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
     {
      char binfstr[16];
      char binstr[80];
-     sprintf(binfstr, "%%%ib", binwide);         
+     sprintf(binfstr, "%%%ib", binwide);
      b2str(binstr, binfstr, iVal);  
      if (Auto->Checked)
       {
@@ -368,7 +374,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
       }
     }
   }
-
+#endif
 
  Graphics::TBitmap* bm = new Graphics::TBitmap;
  bm->Canvas->Font = MOutput->Font;
@@ -555,14 +561,14 @@ void __fastcall TCalcForm::CBStrKeyPress(TObject *Sender, char &Key)
 }
 //---------------------------------------------------------------------------
 
-float_t Help(float_t d)
+float__t Help(float__t d)
 {
  Application->HelpCommand(HELP_CONTENTS, 0);
  return 0;
 }
 //---------------------------------------------------------------------------
 
-float_t menu(float_t d)
+float__t menu(float__t d)
 {
  if (d == 0)
   {
@@ -581,7 +587,7 @@ float_t menu(float_t d)
 }
 //---------------------------------------------------------------------------
 
-float_t home(float_t x, float_t y)
+float__t home(float__t x, float__t y)
 {
  if (x < 0) x = 0;
  if (y < 0) y = 0;
@@ -593,14 +599,14 @@ float_t home(float_t x, float_t y)
 }
 //---------------------------------------------------------------------------
 
-float_t vars(float_t d)
+float__t vars(float__t d)
 {
  CalcForm->Variables1Click(NULL);
  return 0;
 }
 //---------------------------------------------------------------------------
 
-float_t fOpacity(float_t d)
+float__t fOpacity(float__t d)
 {
  d = d * 255.0/100;
  if (d < 20.0) d = 20.0;
@@ -611,7 +617,7 @@ float_t fOpacity(float_t d)
 }
 //---------------------------------------------------------------------------
 
-float_t BinWide(float_t d)
+float__t BinWide(float__t d)
 {
  if (d > 64.0) d = 64.0;
  CalcForm->binwide = (int)d;
@@ -687,12 +693,12 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
    delete Reg;
   }
 #endif
- ccalc->addfn("help", (void*)(float_t(*)(float_t))Help);
- ccalc->addfn("menu", (void*)(float_t(*)(float_t))menu);
- ccalc->addfn("vars", (void*)(float_t(*)(float_t))vars);
- ccalc->addfn("opacity", (void*)(float_t(*)(float_t))fOpacity);
- ccalc->addfn("binwide", (void*)(float_t(*)(float_t))BinWide);
- ccalc->addfn2("home", (void*)(float_t(*)(float_t, float_t))home);
+ ccalc->addfn("help", (void*)(float__t(*)(float__t))Help);
+ ccalc->addfn("menu", (void*)(float__t(*)(float__t))menu);
+ ccalc->addfn("vars", (void*)(float__t(*)(float__t))vars);
+ ccalc->addfn("opacity", (void*)(float__t(*)(float__t))fOpacity);
+ ccalc->addfn("binwide", (void*)(float__t(*)(float__t))BinWide);
+ ccalc->addfn2("home", (void*)(float__t(*)(float__t, float__t))home);
  //AlphaBlend = true;
  //AlphaBlendValue = opacity;
  Application->ShowHint = true;
@@ -795,19 +801,15 @@ void __fastcall TCalcForm::Exit1Click(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-static void AddVarList(char *VarName, float_t fVal)
-{
-  if(fVal != 0) VarsFrm->VarsMemo->Lines->Add(
-     AnsiString().sprintf("%-10s = %-.5Lg", VarName, fVal));
-}
-//---------------------------------------------------------------------------
-
 void __fastcall TCalcForm::Variables1Click(TObject *Sender)
 {
+ char vars[4096];
+ int MaxLen = 0;
  VarsFrm->Top = Top;
  VarsFrm->Left = Left;
  VarsFrm->VarsMemo->Lines->Clear();
- ccalc->varlist(AddVarList);
+ ccalc->varlist(vars, sizeof(vars), &MaxLen);
+ VarsFrm->VarsMemo->Lines->Text = vars;
  VarsFrm->ShowModal();
 }
 

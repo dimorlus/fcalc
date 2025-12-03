@@ -15,7 +15,7 @@ VERSION = BCB.06.00
 # ---------------------------------------------------------------------------
 PROJECT = RegExpCalculator.exe
 OBJFILES = RegExpCalculator.obj HTMLHelpViewer.obj UseHTMLHelp.obj scalc.obj \
-    StrUtils.obj RegExpClass.obj RegExpCalc.obj sfmts.obj
+    StrUtils.obj RegExpClass.obj RegExpCalc.obj sfmts.obj sfunc.obj
 RESFILES = RegExpCalculator.res
 MAINSOURCE = RegExpCalculator.cpp
 RESDEPEN = $(RESFILES) RegExpCalc.dfm
@@ -31,7 +31,7 @@ OTHERFILES =
 # ---------------------------------------------------------------------------
 DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
-USERDEFINES = 
+USERDEFINES = _DEBUG
 SYSDEFINES = NO_STRICT
 INCLUDEPATH = ..;$(BCB)\include;$(BCB)\include\vcl
 LIBPATH = ..;$(BCB)\lib\obj;$(BCB)\lib
@@ -42,12 +42,13 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a1 -b- -k- -vi -c -tW -tWM
-IDLCFLAGS = -I.. -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa
-PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
+CFLAG1 = -Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a1 -b- -k -y -v -vi- -c \
+    -tW -tWM
+IDLCFLAGS = -I.. -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
+PFLAGS = -$Y+ -$W -$O- -$A8 -v -JPHNE -M
 RFLAGS = 
-AFLAGS = /mx /w2 /zn
-LFLAGS = -D"" -aa -Tpe -x -Gn
+AFLAGS = /mx /w2 /zi
+LFLAGS = -D"" -aa -Tpe -x -Gn -v
 # ---------------------------------------------------------------------------
 ALLOBJ = c0w32.obj sysinit.obj $(OBJFILES)
 ALLRES = $(RESFILES)

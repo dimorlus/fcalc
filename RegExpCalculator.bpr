@@ -5,7 +5,7 @@
     <VERSION value="BCB.06.00"/>
     <PROJECT value="RegExpCalculator.exe"/>
     <OBJFILES value="RegExpCalculator.obj HTMLHelpViewer.obj UseHTMLHelp.obj scalc.obj 
-      StrUtils.obj RegExpClass.obj RegExpCalc.obj sfmts.obj"/>
+      StrUtils.obj RegExpClass.obj RegExpCalc.obj sfmts.obj sfunc.obj"/>
     <RESFILES value="RegExpCalculator.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -58,6 +58,7 @@
       <FILE FILENAME="RegExpClass.cpp" FORMNAME="" UNITNAME="RegExpClass" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="RegExpCalc.cpp" FORMNAME="RegExpCalcFrm" UNITNAME="RegExpCalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="sfmts.cpp" FORMNAME="" UNITNAME="sfmts" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="sfunc.cpp" FORMNAME="" UNITNAME="sfunc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
