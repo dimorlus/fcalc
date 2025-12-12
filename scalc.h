@@ -52,6 +52,8 @@
 #define AUT     (1<<26) // (UI) Auto output
 #define TOP     (1<<27) // (UI) Always on top
 #define IMUL	(1<<28) // (WO) Implicit multiplication
+#define OPT	    (1<<29) // (UI) Print options 
+
 #define STRBUF  256     // bufer size for string operations
 
 #define _WCHAR_         // L'c' and 'c'W input format allow
@@ -296,6 +298,12 @@ class calculator
     int   errpos;
     char c_imaginary;
 
+    bool expr;
+	float__t result_fval;
+    __int64 result_ival;
+	float__t result_imval;
+    
+
     inline unsigned string_hash_function(char* p);
     symbol* add(t_symbol tag, const char* name, void* func = NULL);
     symbol* add(t_symbol tag, v_func fidx, const char* name, void* func=NULL);
@@ -331,7 +339,8 @@ class calculator
 	char Ichar(void) { return c_imaginary; };
     int format_out(int Options, int binwide, int n, float__t fVal, float__t imVal,
         __int64 iVal, char* expr, char strings[20][80]);
-
+    int print(char* str, int Options, int binwide, float__t fVal, float__t imVal,
+        __int64 iVal, int* size = NULL);
     ~calculator(void);
 };
 
