@@ -37,6 +37,8 @@
 calculator::calculator(int cfg)
 {
   errpos = 0;
+  pos = 0;
+  expr = false;
   tmp_var_count = 0;
   err[0] = '\0';
   scfg = cfg;
@@ -149,6 +151,11 @@ calculator::calculator(int cfg)
   add(tsFFUNC3, "cmp", (void*)(float__t(*)(float__t, float__t, float__t))Cmp);
   add(tsFFUNC2, "ee", (void*)(float__t(*)(float__t,float__t))Ee);
 
+  add(tsIFUNCF1, "wrgb", (void*)wavelength_to_rgb);
+  add(tsIFUNCF1, "trgb", (void*)temperature_to_rgb);
+  add(tsSFUNCF1, "winf", (void*)wavelength_info);
+
+  // Mathematical constants
   addfvar("pi", M_PI);
   addfvar("e", M_E);
   addfvar("phi", PHI);
@@ -1012,21 +1019,24 @@ symbol* calculator::find(const char* name, void* func)
 
 void calculator::addfvar(const char* name, float__t val)
 {
- symbol* sp = add(tsVARIABLE, name);
+ //symbol* sp = add(tsVARIABLE, name);
+ symbol* sp = add(tsCONSTANT, name);
  sp->val.tag = tvFLOAT;
  sp->val.fval = val;
 }
 
 void calculator::addivar(const char* name, int_t val)
 {
-    symbol* sp = add(tsVARIABLE, name);
+    //symbol* sp = add(tsVARIABLE, name);
+    symbol* sp = add(tsCONSTANT, name);
     sp->val.tag = tvINT;
     sp->val.ival = val;
 }
 
 void calculator::addlvar(const char* name, float__t fval, int_t ival)
 {
-    symbol* sp = add(tsVARIABLE, name);
+    //symbol* sp = add(tsVARIABLE, name);
+    symbol* sp = add(tsCONSTANT, name);
     sp->val.tag = tvINT;
     sp->val.fval = fval;
     sp->val.ival = ival;    
@@ -2013,7 +2023,7 @@ t_operator calculator::scan(bool operand, bool percent)
           DeepCopy(v_stack[v_sp], sym->val);
           v_stack[v_sp].pos = pos;
           v_stack[v_sp++].var = sym;
-          return (sym->tag == tsVARIABLE) ? toOPERAND : toFUNC;
+          return (sym->tag == tsVARIABLE||sym->tag == tsCONSTANT) ? toOPERAND : toFUNC;
         }
       else return toOPERAND;
     }
@@ -2072,6 +2082,11 @@ bool calculator::assign()
   }
  else
    {
+    if (v.var->tag == tsCONSTANT)
+     {
+      error(v.pos, "assignment to constant");
+      return false;
+	 }
     SafeFree(v.var->val);
     DeepCopy(v.var->val, v);
     return true;
@@ -2100,6 +2115,9 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
   o_sp = 0;
   pos = 0;
   err[0] = '\0';
+
+  if (!expr) return qnan;
+
   o_stack[o_sp++] = toBEGIN;
 
   memset(sres, 0, STRBUF);
@@ -2223,8 +2241,6 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                     add(tsVARIABLE, var_name)->val = v_stack[0];
                    }
 				  result_fval = v_stack[0].get();
-				  result_imval = v_stack[0].imval;
-
 				  if (pimval) *pimval = v_stack[0].imval;
                   if (v_stack[0].tag == tvINT)
                     {
@@ -2237,7 +2253,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                        if (v_stack[0].sval) free(v_stack[0].sval);
                        v_stack[0].sval = NULL;
                       }
-                     else sres[0] = '\0';
+                     //else sres[0] = '\0';
                      return v_stack[0].ival;
                     }
                   else
@@ -2256,6 +2272,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                 }
               else
               if (v_sp != 0) error("Unexpected end of expression");
+              error("Unexpected end of expression");
               return qnan;
 
             case toCOMMA:
@@ -3272,6 +3289,11 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                 }
               else
                 {
+                  if (v_stack[v_sp - 2].var->tag == tsCONSTANT)
+                  {
+                      error(v_stack[v_sp - 2].pos, "assignment to constant");
+                      return qnan;
+                  }
                   //v_stack[v_sp - 2] := v_stack[v_sp - 1]
                   if ((v_stack[v_sp - 1].tag == tvSTR) && (v_stack[v_sp - 1].sval))
                   {
@@ -3390,7 +3412,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                   {
                   switch (sym->tag)
                     {
-                    case tsVFUNC1:
+				  case tsVFUNC1: //float or complex f(x|z)
                         if (n_args != 1)
                         {
                             error(v_stack[v_sp - n_args - 1].pos,
@@ -3400,7 +3422,8 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                         ((void(*)(value*, value*, int))sym->func)(&v_stack[v_sp - 2], &v_stack[v_sp - 1], sym->fidx);
                         v_sp -= 1;
                       break;
-                    case tsVFUNC2:
+
+					case tsVFUNC2: //float or complex f(x|z,y|z)
                         if (n_args != 2)
                         {
                             error(v_stack[v_sp - n_args - 1].pos,
@@ -3410,7 +3433,41 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                         ((void(*)(value*, value*, value*, int))sym->func)(&v_stack[v_sp - 3], &v_stack[v_sp - 2], &v_stack[v_sp-1], sym->fidx);
                         v_sp -= 2;
                         break;
-                    case tsIFUNC1:// f(x)
+
+                    case tsIFUNCF1:// int f(float x)
+                        if (n_args != 1)
+                        {
+                            error(v_stack[v_sp - n_args - 1].pos,
+                                "Function should take one argument");
+                            return qnan;
+                        }
+                        v_stack[v_sp - 2].ival =
+                            (*(int_t(*)(float__t))sym->func)(v_stack[v_sp - 1].get());
+                        v_stack[v_sp - 2].tag = tvINT;
+                        v_sp -= 1;
+                        break;
+
+                    case tsSFUNCF1: //char* f(float x)
+                        if (n_args != 1)
+                        {
+                            error(v_stack[v_sp - n_args - 1].pos,
+                                "Function should take one argument");
+                            return qnan;
+                        }
+						{
+                            const char* resStr = (*(const char* (*)(float__t))sym->func)(v_stack[v_sp - 1].get());
+                            strncpy(sres, resStr ? resStr : "", STRBUF - 1);
+                            sres[STRBUF - 1] = '\0';
+                            if (sres[0]) scfg |= STR;
+                            SafeFree(v_stack[v_sp - n_args - 1]);
+                            v_stack[v_sp - n_args - 1].sval = strdup(sres);
+                            v_stack[v_sp - n_args - 1].ival = 0;
+                            v_stack[v_sp - n_args - 1].tag = tvINT;// tvSTR;
+                        }
+                        v_sp -= 1;
+                        break;
+
+                    case tsIFUNC1:// int f(int x)
                       if (n_args != 1)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3423,7 +3480,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                       v_sp -= 1;
                       break;
 
-					case tsIFUNC2:// f(x,y)
+					case tsIFUNC2:// int f(int x, int y)
                       if (n_args != 2)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3451,7 +3508,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                       v_sp -= 3;
                     break;
 
-					case tsFFUNC1:// f(x)
+					case tsFFUNC1:// float f(float x)
                       if (n_args != 1)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3464,7 +3521,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                       v_sp -= 1;
                       break;
 
-					case tsFFUNC2:// f(x,y)
+					case tsFFUNC2:// float f(float x, float y)
                       if (n_args != 2)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3478,7 +3535,7 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                       v_sp -= 2;
                       break;
 
-					case tsFFUNC3:// f(x,y,z)    
+					case tsFFUNC3:// float f(float x, float y, float z)
                       if (n_args != 3)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3503,24 +3560,36 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                                 "Function should take one or more arguments");
                           return qnan;
                         }
-                      v_stack[v_sp-n_args-1].tag = tvSTR;
-                      v_stack[v_sp-n_args-1].ival = 0;
-                      v_stack[v_sp-n_args-1].sval = (char *)malloc(STRBUF);
 
-                      (*(int_t(*)(char *,char *, int, value*))sym->func)
-                       (v_stack[v_sp-n_args-1].sval,
+
+                      (*(int_t(*)(char*, char*, int, value*))sym->func) //call prn(...)
+						      (sres, //put result string in sres first
                         v_stack[v_sp-n_args].get_str(),
                         n_args-1, &v_stack[v_sp-n_args+1]);
-                      strcpy(sres, v_stack[v_sp-n_args-1].sval);
+                      
+                      SafeFree(v_stack[v_sp - n_args - 1]);
+					  v_stack[v_sp - n_args - 1].sval = strdup(sres);
+					  v_stack[v_sp - n_args - 1].ival = 0;
+                      v_stack[v_sp - n_args - 1].tag = tvINT;// tvSTR;
+
                       if (n_args > 1)
                        {
                         v_stack[v_sp-n_args-1].ival = v_stack[v_sp-n_args+1].ival;
                         if (v_stack[v_sp-n_args+1].fval > maxdbl) v_stack[v_sp-n_args-1].fval = qnan;
                         else v_stack[v_sp-n_args-1].fval = v_stack[v_sp-n_args+1].fval;
+                        //// Fix: Update the tag to match the copied value type
+                        //v_stack[v_sp-n_args-1].tag = v_stack[v_sp-n_args+1].tag;
+                        //// Avoid freeing the string pointer we just overwrote (it was malloc'd but we overwrote the pointer)
+                        //// Actually, wait. We allocated sval at line 3554.
+                        //// If we overwrite it with ival/fval, we LEAK the memory and confusing SafeFree later.
+                        //// We must free it BEFORE overwriting if we are switching type.
+                        //free(v_stack[v_sp-n_args-1].sval); 
+                        //v_stack[v_sp-n_args-1].sval = NULL;
                        }
                       v_sp -= n_args;
                     break;
-					case tsSIFUNC1:// f(str)
+
+					case tsSIFUNC1:// int f(char *str)
                       if (n_args != 1)
                         {
                           error(v_stack[v_sp-n_args-1].pos,
@@ -3551,7 +3620,8 @@ float__t calculator::evaluate(char* expression, __int64 * piVal, float__t* pimva
                       }
 					  v_sp -= 1;
 					  break;
-					case tsFFUNCC1:// f(x + i y)
+
+					case tsFFUNCC1:// float f(x + i y)
                         if (n_args != 1)
                         {
                             error(v_stack[v_sp - n_args - 1].pos,

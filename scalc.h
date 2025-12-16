@@ -146,6 +146,9 @@ enum t_operator
 enum t_symbol
 {
   tsVARIABLE,
+  tsCONSTANT,
+  tsIFUNCF1, //int f(float x)
+  tsSFUNCF1, //char* f(float x)
   tsIFUNC1,  //int f(int x)
   tsIFUNC2,  //int f(int x, int y)
   tsFFUNC1,  //float f(float x)

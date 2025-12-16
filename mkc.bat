@@ -6,4 +6,4 @@ pause
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" fcalc.iss
 pause
 call clean
-"Setup\fcalc_setup.exe"
+REM "Setup\fcalc_setup.exe"
