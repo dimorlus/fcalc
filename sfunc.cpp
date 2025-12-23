@@ -1039,97 +1039,130 @@ int_t datatime(char *tstr)
     return (int_t)result;
 }
 
+const char *wavelength_info (float__t wavelength_m)
+{
+ // wavelength_m - длина волны в метрах
 
-const char* wavelength_info(float__t wavelength_m) {
-    // wavelength_m - длина волны в метрах
-
-    if (wavelength_m > 1000) {
-        return "VLF radio waves (3-30 kHz)";
-    }
-    else if (wavelength_m > 100) {
-        return "LF radio waves (30-300 kHz)";
-    }
-    else if (wavelength_m > 10) {
-        return "MF radio waves (300-3000 kHz, AM broadcast)";
-    }
-    else if (wavelength_m > 1) {
-        return "HF radio waves (3-30 MHz, shortwave)";
-    }
-    else if (wavelength_m > 0.1) {
-        return "VHF radio waves (30-300 MHz, FM/TV)";
-    }
-    else if (wavelength_m > 0.01) {
-        return "UHF radio waves (300-3000 MHz)";
-    }
-    else if (wavelength_m > 0.03) {
-        return "L-band microwaves (1-2 GHz, GPS)";
-    }
-    else if (wavelength_m > 0.015) {
-        return "S-band microwaves (2-4 GHz, WiFi/weather radar)";
-    }
-    else if (wavelength_m > 0.0075) {
-        return "C-band microwaves (4-8 GHz, satellite)";
-    }
-    else if (wavelength_m > 0.00375) {
-        return "X-band microwaves (8-12 GHz, radar)";
-    }
-    else if (wavelength_m > 0.0024) {
-        return "Ku-band microwaves (12-18 GHz, satellite TV)";
-    }
-    else if (wavelength_m > 0.0015) {
-        return "K-band microwaves (18-27 GHz, speed radar)";
-    }
-    else if (wavelength_m > 0.001) {
-        return "Ka-band microwaves (27-40 GHz)";
-    }
-    else if (wavelength_m > 1e-4) {
-        return "EHF/mmWave (30-300 GHz, 5G)";
-    }
-    else if (wavelength_m > 5e-5) {
-        return "Far infrared (FIR, 50-1000 um)";
-    }
-    else if (wavelength_m > 3e-6) {
-        return "Long-wave infrared (LWIR, 8-15 um, thermal)";
-    }
-    else if (wavelength_m > 1.4e-6) {
-        return "Mid-wave infrared (MWIR, 3-8 um)";
-    }
-    else if (wavelength_m > 7.8e-7) {
-        return "Short-wave infrared (SWIR, 1.4-3 um)";
-    }
-    else if (wavelength_m > 6.2e-7) {
-        return "Near infrared (NIR, 0.78-1.4 um) / Red (780-620 nm)";
-    }
-    else if (wavelength_m > 5.97e-7) {
-        return "Orange visible light (620-597 nm)";
-    }
-    else if (wavelength_m > 5.77e-7) {
-        return "Yellow visible light (597-577 nm)";
-    }
-    else if (wavelength_m > 4.92e-7) {
-        return "Green visible light (577-492 nm)";
-    }
-    else if (wavelength_m > 4.55e-7) {
-        return "Blue visible light (492-455 nm)";
-    }
-    else if (wavelength_m > 3.8e-7) {
-        return "Violet visible light (455-380 nm)";
-    }
-    else if (wavelength_m > 3.15e-7) {
-        return "UVA ultraviolet (380-315 nm, tanning/black light)";
-    }
-    else if (wavelength_m > 2.8e-7) {
-        return "UVB ultraviolet (315-280 nm, sunburn)";
-    }
-    else if (wavelength_m > 1e-8) {
-        return "UVC ultraviolet (280-100 nm, germicidal)";
-    }
-    else if (wavelength_m > 1e-11) {
-        return "X-ray radiation (0.01-10 nm, medical imaging)";
-    }
-    else {
-        return "Gamma ray radiation (<0.01 nm, nuclear)";
-    }
+ if (wavelength_m > 10000)
+  {
+   return "VLF radio waves (3-30 kHz, 10-100 km, mid: 31.6 km)";
+  }
+ else if (wavelength_m > 1000)
+  {
+   return "LF radio waves (30-300 kHz, 1-10 km, mid: 3.16 km)";
+  }
+ else if (wavelength_m > 100)
+  {
+   return "MF radio waves (300-3000 kHz, 100-1000 m, AM, mid: 316 m)";
+  }
+ else if (wavelength_m > 10)
+  {
+   return "HF radio waves (3-30 MHz, 10-100 m, shortwave, mid: 31.6 m)";
+  }
+ else if (wavelength_m > 1)
+  {
+   return "VHF radio waves (30-300 MHz, 1-10 m, FM/TV, mid: 3.16 m)";
+  }
+ else if (wavelength_m > 0.1)
+  {
+   return "UHF radio waves (300-3000 MHz, 0.1-1 m, mid: 31.6 cm)";
+  }
+ else if (wavelength_m > 0.03)
+  {
+   return "L-band microwaves (1-2 GHz, 15-30 cm, GPS, mid: 20 cm)";
+  }
+ else if (wavelength_m > 0.015)
+  {
+   return "S-band (2-4 GHz, 7.5-15 cm, WiFi/radar, mid: 10 cm)";
+  }
+ else if (wavelength_m > 0.0075)
+  {
+   return "C-band microwaves (4-8 GHz, 3.75-7.5 cm, sat, mid: 5 cm)";
+  }
+ else if (wavelength_m > 0.00375)
+  {
+   return "X-band microwaves (8-12 GHz, 2.5-3.75 cm, mid: 3 cm)";
+  }
+ else if (wavelength_m > 0.0025)
+  {
+   return "Ku-band (12-18 GHz, 1.67-2.5 cm, sat TV, mid: 2 cm)";
+  }
+ else if (wavelength_m > 0.00167)
+  {
+   return "K-band (18-27 GHz, 1.11-1.67 cm, radar, mid: 1.33 cm)";
+  }
+ else if (wavelength_m > 0.001)
+  {
+   return "Ka-band (27-40 GHz, 7.5-11.1 mm, mid: 8.96 mm)";
+  }
+ else if (wavelength_m > 1e-4)
+  {
+   return "Far infrared (FIR, 100-1000 um, mid: 316 um)";
+  }
+ else if (wavelength_m > 1e-5)
+  {
+   return "EHF/mmWave (30-300 GHz, 10-100 um, 5G, mid: 31.6 um)";
+  }
+ else if (wavelength_m > 8e-6)
+  {
+   return "Long-wave IR (LWIR, 8-15 um, thermal, mid: 11.5 um)";
+  }
+ else if (wavelength_m > 3e-6)
+  {
+   return "Mid-wave IR (MWIR, 3-8 um, night vision, mid: 5.5 um)";
+  }
+ else if (wavelength_m > 1.4e-6)
+  {
+   return "Short-wave IR (SWIR, 1.4-3 um, fiber, mid: 2.2 um)";
+  }
+ else if (wavelength_m > 7.8e-7)
+  {
+   return "Near IR (NIR, 0.78-1.4 um, remote, mid: 1.09 um)";
+  }
+ else if (wavelength_m > 6.2e-7)
+  {
+   return "Red visible light (620-780 nm, mid: 700 nm)";
+  }
+ else if (wavelength_m > 5.97e-7)
+  {
+   return "Orange visible light (597-620 nm, mid: 608.5 nm)";
+  }
+ else if (wavelength_m > 5.77e-7)
+  {
+   return "Yellow visible light (577-597 nm, mid: 587 nm)";
+  }
+ else if (wavelength_m > 4.92e-7)
+  {
+   return "Green visible light (492-577 nm, mid: 534.5 nm)";
+  }
+ else if (wavelength_m > 4.55e-7)
+  {
+   return "Blue visible light (455-492 nm, mid: 473.5 nm)";
+  }
+ else if (wavelength_m > 3.8e-7)
+  {
+   return "Violet visible light (380-455 nm, mid: 417.5 nm)";
+  }
+ else if (wavelength_m > 3.15e-7)
+  {
+   return "UVA ultraviolet (315-380 nm, tanning, mid: 347.5 nm)";
+  }
+ else if (wavelength_m > 2.8e-7)
+  {
+   return "UVB ultraviolet (280-315 nm, sunburn, mid: 297.5 nm)";
+  }
+ else if (wavelength_m > 1e-7)
+  {
+   return "UVC ultraviolet (100-280 nm, germicidal, mid: 190 nm)";
+  }
+ else if (wavelength_m > 1e-11)
+  {
+   return "X-ray radiation (0.01-10 nm, imaging, mid: 1 nm)";
+  }
+ else
+  {
+   return "Gamma ray radiation (<0.01 nm, nuclear)";
+  }
 }
 
 //Функция:

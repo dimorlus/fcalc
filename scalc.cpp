@@ -101,7 +101,6 @@ calculator::calculator(int cfg)
   add(tsVFUNC1, vf_re, "re", (void*)vfunc);
   add(tsVFUNC1, vf_im, "im", (void*)vfunc);
 
-
   add(tsFFUNC1, "erf", (void*)(float__t(*)(float__t))Erf);
   add(tsFFUNC2, "atan2", (void*)(float__t(*)(float__t,float__t))Atan2l);
   add(tsFFUNC2, "hypot", (void*)(float__t(*)(float__t,float__t))Hypot);
@@ -192,7 +191,24 @@ calculator::calculator(int cfg)
   addfvar("ry", 10973731.568160);          // Rydberg constant (m⁻¹)
   addfvar("sb", 5.670374419e-8);           // Stefan-Boltzmann constant (W/(m²·K⁴))
 
-  addfvar("version", _ver_);
+ // Rainbow colors
+ addfvar ("fir", 316e-6);
+ addfvar ("lwir", 11.5e-6);
+ addfvar ("mwir", 5.5e-6);
+ addfvar ("swir", 2.2e-6);
+ addfvar ("nir", 1.09e-6);
+ addfvar ("red", 685e-9);
+ addfvar ("orange", 605e-9);
+ addfvar ("yellow", 580e-9);
+ addfvar ("green", 532e-9);
+ addfvar ("blue", 472e-9);
+ addfvar ("indigo", 435e-9);
+ addfvar ("violet", 400e-9);
+ addfvar ("uva", 348e-9);
+ addfvar ("uvb", 298e-9);
+ addfvar ("uvc", 190e-9);
+
+ // Integer Limits:
   addlvar("max32", 2147483647.0, 0x7fffffff); 
   addlvar("maxint", 2147483647.0, 0x7fffffff); 
   addlvar("maxu32", 4294967295.0, 0xffffffff); 
@@ -202,6 +218,7 @@ calculator::calculator(int cfg)
   addlvar("maxu64", 18446744073709551615.0, 0xffffffffffffffffull);
   addlvar("maxulong", 18446744073709551615.0, 0xffffffffffffffffull);
  
+ // System
   // Get system timezone information
   TIME_ZONE_INFORMATION tzi;
   DWORD tzResult = GetTimeZoneInformation(&tzi);
@@ -213,6 +230,7 @@ calculator::calculator(int cfg)
   addlvar("timezone", tzHours, (int)tzHours);
   addlvar("daylight", (float__t)daylight, daylight);
   addlvar("tz", currentTz, (int)currentTz);
+ addfvar ("version", _ver_);
 }
 
 calculator::~calculator(void)
@@ -1936,6 +1954,12 @@ t_operator calculator::scan(bool operand, bool percent)
           scientific(fpos, fval);
       }
       ferr = errno;
+    if ((ipos <= fpos) && ((*fpos == '.') || (*fpos == '$') || (*fpos == '\\'))) 
+     {
+      pos = fpos - buf+1;
+      error ("bad numeric constant");
+      return toERROR;
+     }
       if (ierr && ferr)
        {
         error("bad numeric constant");
