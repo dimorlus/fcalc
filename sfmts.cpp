@@ -186,6 +186,18 @@ int d2scistr(char *str, float__t d)
 }
 //---------------------------------------------------------------------------
 
+int normz (float__t &re, float__t &im)
+ {
+  float__t d = sqrt (re * re + im * im);
+  if (isNan (d)) return 0;
+  if (d == 0) return 0;
+  if (re != 0 && (d / fabs(re) > 1000.0)) re = 0.0;
+  if (im != 0 && (d / fabs(im) > 1000.0)) im = 0.0;
+  return 1;
+ }
+
+
+//---------------------------------------------------------------------------
 int d2nrmstr(char *str, float__t d)
 {
  if (isNan(d)) return sprintf(str, "%e", d);
@@ -272,6 +284,8 @@ int dgr2str(char* str, float__t radians)
 	double sec_full = (min_full - min) * 60.0;
 	int sec = (int)(sec_full + 0.5); // Округляем секунды
 
+ if (fabs (degrees) > 36000)
+  return sprintf (str, "--%c--%c--%c", cdeg[0], cdeg[1], cdeg[2]);
 	// Корректируем переполнение секунд и минут
 	if (sec == 60) {
 		sec = 0;

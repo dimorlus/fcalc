@@ -58,8 +58,10 @@
 
 #define _WCHAR_         // L'c' and 'c'W input format allow
 
+#define nullptr NULL
 #define _long_double_
 typedef __int64 int_t;
+
 typedef unsigned __int64 unsigned_t;
 #ifdef _long_double_
 typedef long double float__t;
@@ -158,6 +160,7 @@ enum t_symbol
   tsFFUNC3,  //float f(float x, float y, float z)
   tsIFFUNC3, //int f(float x, float y, int z)
   tsPFUNCn,  //int printf(char *format, ...)
+ tsSFUNCF2,  // float const(char *name, float value)
   tsSIFUNC1, //int f(char *s)
   tsVFUNC1,  // void vfunc(value* res, value* arg, int idx)
   tsVFUNC2,  // void vfunc(value* res, value* arg1, value* arg2, int idx)
@@ -231,7 +234,7 @@ class value
 
     inline ~value()
      {
-      if ((tag == tvSTR) && sval) free(sval);
+  if (sval) free (sval);
       sval = NULL;
      }
 
@@ -290,27 +293,25 @@ class calculator
     int  scfg;
     value v_stack[max_stack_size];
     symbol* hash_table[hash_table_size];
+ t_operator o_stack[max_stack_size];
     int   v_sp;
-    t_operator o_stack[max_stack_size];
     int   o_sp;
     char* buf;
     int   pos;
     int   tmp_var_count;
-    char  err[256];
-    char  sres[STRBUF];
+ char err[80];
     int   errpos;
     char c_imaginary;
-
     bool expr;
+ char sres[STRBUF];
+ __int64 result_ival;
 	float__t result_fval;
-    __int64 result_ival;
 	float__t result_imval;
     
-
-    inline unsigned string_hash_function(char* p);
+ inline unsigned string_hash_function (const char *p);
     symbol* add(t_symbol tag, const char* name, void* func = NULL);
     symbol* add(t_symbol tag, v_func fidx, const char* name, void* func=NULL);
-    symbol* find(const char* name, void* func = NULL);
+ symbol *find (const char *name);
     t_operator scan(bool operand, bool percent);
     void  error(int pos, const char* msg);
     inline void  error(const char* msg) {error(pos-1, msg);}
@@ -324,6 +325,8 @@ class calculator
     float__t tstrtod(char *s, char **endptr);
     void engineering(float__t mul, char * &fpos, float__t &fval);
     void scientific(char * &fpos, float__t &fval);
+ void clear_v_stack ();
+ void addim (void);
 
   public:
     calculator(int cfg = PAS + SCI + UPCASE);
@@ -331,19 +334,23 @@ class calculator
     inline int issyntax(void) {return scfg;}
     inline char *error(void) {return err;}
     inline int errps(void) {return errpos;};
+ inline char *Sres (void) { return sres; };
+ inline char Ichar (void) { return c_imaginary; };
+
+ float__t AddConst (const char *name, float__t val);
+ float__t AddVar (const char *name, float__t val);
+ void addfconst (const char *name, float__t val);
     void addfvar(const char* name, float__t val);
     void addivar(const char* name, int_t val);
     void addlvar(const char* name, float__t fval, int_t ival);
     void addfn(const char* name, void *func) {add(tsFFUNC1, name, func);}
     void addfn2(const char* name, void *func) {add(tsFFUNC2, name, func);}
-    int varlist(char* buf, int bsize, int* maxlen = NULL);
+ int varlist (char *buf, int bsize, int *maxlen = nullptr);
     float__t evaluate(char* expr, __int64 *piVal = NULL, float__t *pimval = NULL);
-    char *Sres(void) {return sres;};
-	char Ichar(void) { return c_imaginary; };
-    int format_out(int Options, int binwide, int n, float__t fVal, float__t imVal,
-        __int64 iVal, char* expr, char strings[20][80]);
-    int print(char* str, int Options, int binwide, float__t fVal, float__t imVal,
-        __int64 iVal, int* size = NULL);
+
+ int format_out (int Options, int binwide, char strings[20][80]);
+ int print (char *str, int Options, int binwide, int *size = nullptr);
+
     ~calculator(void);
 };
 
@@ -352,7 +359,3 @@ extern bool IsNaNL(const long double ldVal);
 #define isnan(a) (a != a)
 
 #endif
-
-
-
-

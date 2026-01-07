@@ -96,8 +96,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 
  int scfg = ccalc->issyntax();
 #ifdef USE_calculator_format_out
- n = ccalc->format_out(Options,  binwide, n,
-               fVal, imVal, iVal, CBStr->Text.c_str(), strings);
+ n = ccalc->format_out(Options,  binwide, strings);
 #else
 
  if (IsNaN(fVal))
