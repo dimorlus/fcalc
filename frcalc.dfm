@@ -157,6 +157,10 @@ object CalcForm: TCalcForm
           Caption = '&Degrees'
           OnClick = DegreesClick
         end
+        object Temperature: TMenuItem
+          Caption = '&Temperature'
+          OnClick = TemperatureClick
+        end
         object String: TMenuItem
           Caption = 'Strin&g'
           OnClick = StringClick
@@ -168,10 +172,6 @@ object CalcForm: TCalcForm
         object All: TMenuItem
           Caption = '&All'
           OnClick = AllClick
-        end
-        object Auto: TMenuItem
-          Caption = 'Auto'
-          OnClick = AutoClick
         end
       end
       object Binarywidth: TMenuItem

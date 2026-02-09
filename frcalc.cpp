@@ -22,7 +22,7 @@
 //---------------------------------------------------------------------------
 #pragma warn -8080
 #pragma warn -8071
-
+#pragma warn -8004 // assigned a value that is never used
 
 #pragma package(smart_init)
 #pragma resource "*.dfm"
@@ -65,15 +65,13 @@ static void GetVars(char *Name, float_t fVal)
 }
 */
 //---------------------------------------------------------------------------
-#define USE_calculator_format_out
+//#define USE_calculator_format_out
 void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 {
  __int64 iVal;
  int n = 0;
-
- char strings[20][80];
-
- memset(strings, 0, sizeof(strings));
+ int prnsize;
+ char strings[2048];
 
  Caption = "Calc: " + CBStr->Text;
 
@@ -95,321 +93,56 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
   }
 
  int scfg = ccalc->issyntax();
-#ifdef USE_calculator_format_out
- n = ccalc->format_out(Options,  binwide, strings);
-#else
 
- if (IsNaN(fVal))
-  {
-   if (ccalc->error()[0])
+ memset(strings, 0, sizeof(strings));
+ n = ccalc->print(strings, Options,  binwide, &prnsize);
+ if ((prnsize > 2) && (strings[prnsize - 2] == '\r')) strings[prnsize - 2] = '\0';
+ if (n == 0) n++;
+
+ {
+   char str[128];
+   int w, ww = 0;
+   int ii, jj = 0;
+   char c;
+   Graphics::TBitmap* bm = new Graphics::TBitmap;
+   bm->Canvas->Font = MOutput->Font;
+
+   for(int i=0; (i < n) && (jj < prnsize - 2); i++)
     {
-     if (ccalc->errps() < 64)
+     ii = 0;
+     do
       {
-       char binstr[80];
-       memset(binstr, '-', sizeof binstr);
-       binstr[ccalc->errps()] = '^';
-       binstr[ccalc->errps()+1] = '\0';
-       sprintf(strings[n++], "%-64s", binstr);
-       sprintf(strings[n++], "%66.66s ", ccalc->error());
+       c = str[ii++] = strings[jj++];
+       if ((c == '\r')||(c == '\0')) break;
       }
-     else
-      {
-       sprintf(strings[n++], "%66.66s ", ccalc->error());
-      }
+     while (c);
+     str[ii-1] = '\0';
+     w = bm->Canvas->TextWidth(str);
+     if (ww < w) ww = w;
+     if (c == '\0') break;
     }
-   else
-    {
-     if (CBStr->Text != "")
-       sprintf(strings[n++], "%66.66s ", "NaN");
-     else
-       sprintf(strings[n++], "%66.66s ", " ");
+   delete bm;
 
-
-   // (RO) String format found
-   if ((Options & STR)||(scfg & STR))
-    {
-     if (Auto->Checked)
-      {
-       if (ccalc->Sres()[0])
-        {
-         char strcstr[80];
-         sprintf(strcstr, "'%s'", ccalc->Sres());
-         if (strcstr[0]) sprintf(strings[n++], "%65.64s", strcstr);
-        }
-      }
-     else
-      {
-       if (ccalc->Sres()[0])
-        {
-         char strcstr[80];
-         sprintf(strcstr, "'%s'", ccalc->Sres());
-         sprintf(strings[n++], "%65.64s", strcstr);
-        }
-       else sprintf(strings[n++], "%65.64s", "''");
-      }
-    }
-   }
-  }
- else
-  {
-   // (WO) Forced float
-   if (Options & FFLOAT) sprintf(strings[n++], "%65.16Lg f", fVal);
-
-   // (RO) Scientific (6.8k) format found
-   if ((Options & SCF)||(scfg & SCF))
-    {
-     char scistr[80];
-     d2scistr(scistr, fVal);
-     sprintf(strings[n++], "%65.64s S", scistr);
-    }
-
-   // (UI) Normalized output
-   if (Options & NRM)
-    {
-     char nrmstr[80];
-     d2nrmstr(nrmstr, fVal);
-     sprintf(strings[n++], "%65.64s n", nrmstr);
-    }
-
-   // (RO) Computing format found
-   if ((Options & CMP)||(scfg & CMP))
-    {
-     char bscistr[80];
-     b2scistr(bscistr, fVal);
-     sprintf(strings[n++], "%65.64s c", bscistr);
-    }
-
-   // (UI) Integer output
-   if (Options & IGR)
-    {
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%65Ld i", iVal);
-      }
-     else sprintf(strings[n++], "%65Ld i", iVal);
-    }
-
-   // (UI) Unsigned output
-   if (Options & UNS)
-    {
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%65Lu u", iVal);
-      }
-     else sprintf(strings[n++], "%65Lu u", iVal);
-    }
-
-   // (UI) Fraction output
-   if (Options & FRC)
-    {
-     char frcstr[80];
-     int num, denum;
-     double val;
-     if (fVal > 0) val = fVal;
-     else val = -fVal;
-     double intpart = floor(val);
-     if (intpart > 0)
-      {
-       fraction(val-intpart, 0.001, num, denum);
-       if (fVal > 0) sprintf(frcstr, "%.0f+%d/%d", intpart, num, denum);
-       else sprintf(frcstr, "-%.0f-%d/%d", intpart, num, denum);
-      }
-     else
-      {
-       fraction(val, 0.001, num, denum);
-       if (fVal > 0) sprintf(frcstr, "%d/%d", num, denum);
-       else sprintf(frcstr, "-%d/%d", num, denum);
-      }
-     if (denum) sprintf(strings[n++], "%65.64s F", frcstr);
-    }
-
-   // (UI) Fraction inch output
-   if (Options & FRI)
-    {
-     char frcstr[80];
-     int num, denum;
-     double val;
-     if (fVal > 0) val = fVal;
-     else val = -fVal;
-     val /= 25.4e-3;
-     double intpart = floor(val);
-     if (intpart > 0)
-      {
-       fraction(val-intpart, 0.001, num, denum);
-       if (num&&denum)
-        {
-         if (fVal > 0) sprintf(frcstr, "%.0f+%d/%d", intpart, num, denum);
-         else sprintf(frcstr, "-%.0f-%d/%d", intpart, num, denum);
-        }
-       else
-        {
-         sprintf(frcstr, "%.0f", intpart);
-        }
-      }
-     else
-      {
-       fraction(val, 0.001, num, denum);
-       if (fVal > 0) sprintf(frcstr, "%d/%d", num, denum);
-       else sprintf(frcstr, "-%d/%d", num, denum);
-      }
-     sprintf(strings[n++], "%65.64s \"", frcstr);
-    }
-
-   // (RO) Hex format found
-   if ((Options & HEX)||(scfg & HEX))
-    {
-     char binfstr[16];
-     sprintf(binfstr, "%%64.%iLxh", binwide/4);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], binfstr, iVal);
-      }
-     else sprintf(strings[n++], binfstr, iVal);
-    }
-
-   // (RO) Octal format found
-   if ((Options & OCT)||(scfg & OCT))
-    {
-     char binfstr[16];
-     sprintf(binfstr, "%%64.%iLoo", binwide/3);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], binfstr, iVal);
-      }
-     else sprintf(strings[n++], binfstr, iVal);
-    }
-
-   // (RO) Binary format found
-   if ((Options & fBIN)||(scfg & fBIN))
-    {
-     char binfstr[16];
-     char binstr[80];
-     sprintf(binfstr, "%%%ib", binwide);
-     b2str(binstr, binfstr, iVal);  
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64sb", binstr);
-      }
-     else sprintf(strings[n++], "%64.64sb", binstr);
-    }
-
-   // (RO) Char format found
-   if ((Options & CHR)||(scfg & CHR))
-    {
-     char chrstr[80];
-     chr2str(chrstr, iVal);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64s  c", chrstr);
-      }
-     else sprintf(strings[n++], "%64.64s  c", chrstr);
-    }
-
-   // (RO) WChar format found
-   if ((Options & WCH)||(scfg & WCH))
-    {
-     char wchrstr[80];
-     wchr2str(wchrstr, iVal);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%64.64s  c", wchrstr);
-      }
-     else sprintf(strings[n++], "%64.64s  c", wchrstr);
-    }
-
-   // (RO) Date time format found
-   if ((Options & DAT)||(scfg & DAT))
-    {
-     char dtstr[80];
-     t2str(dtstr, iVal);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%65.64s", dtstr);
-      }
-     else sprintf(strings[n++], "%65.64s", dtstr);
-    }
-
-   // (RO) Unix time
-   if ((Options & UTM)||(scfg & UTM))
-    {
-     char dtstr[80];
-     nx_time2str(dtstr, iVal);
-     if (Auto->Checked)
-      {
-       if ((fVal-iVal)==0) sprintf(strings[n++], "%65.64s", dtstr);
-      }
-     else sprintf(strings[n++], "%65.64s", dtstr);
-    }
-
-   // (RO) Degrees format found
-   if ((Options & DEG)||(scfg & DEG))
-    {
-     char dgrstr[80];
-     dgr2str(dgrstr, fVal);
-     sprintf(strings[n++], "%65.64s", dgrstr);
-    }
-
-   // (RO) String format found
-   if ((Options & STR)||(scfg & STR))
-    {
-     if (Auto->Checked)
-      {
-       if (ccalc->Sres()[0])
-        {
-         char strcstr[80];
-         sprintf(strcstr, "'%s'", ccalc->Sres());
-         if (strcstr[0]) sprintf(strings[n++], "%65.64s", strcstr);
-        }
-      }
-     else
-      {
-       if (ccalc->Sres()[0])
-        {
-         char strcstr[80];
-         sprintf(strcstr, "'%s'", ccalc->Sres());
-         sprintf(strings[n++], "%65.64s", strcstr);
-        }
-       else sprintf(strings[n++], "%65.64s", "''");
-      }
-    }
-  }
-#endif
-
- Graphics::TBitmap* bm = new Graphics::TBitmap;
- bm->Canvas->Font = MOutput->Font;
- int ww = 0;
- for(int i=0; i < n; i++)
-  {
-   int w = bm->Canvas->TextWidth(strings[i]);
-   if (ww < w) ww = w;
-  }
- delete bm;
-
- MOutput->Lines->Clear();
- int dpi = GetDeviceCaps(Canvas->Handle, LOGPIXELSX);
- int nw = ww+20*dpi/96;
- if (Width != nw) Width = nw;
- //MOutput->Width = Width - 4;
+   MOutput->Lines->Clear();
+   int dpi = GetDeviceCaps(Canvas->Handle, LOGPIXELSX);
+   int nw = ww+10*dpi/96;
+   if (Width != nw) Width = nw;
+ }
 
  SendMessage(MOutput->Handle, WM_VSCROLL, SB_TOP, 0);
  SendMessage(MOutput->Handle, WM_HSCROLL, SB_TOP, 0);
- int nn = 0;
- for(int i=0; i < n; i++)
-  {
-   if (strings[i][0]) MOutput->Lines->Insert(nn++, strings[i]);
-  }
 
- if (nn == 0) nn++;
+ MOutput->Text = strings;
 
  if (CalcForm->MnCalc->Enabled)
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+10+
             GetMainMenuHeight()+
-            ((CBStr->Height*0.7)*(nn));
+            ((CBStr->Height*0.7)*(n));
  else
    Height = GetCaptionHeight()*1.2+
-            CBStr->Height+10+
-            ((CBStr->Height*0.7)*(nn));
+            CBStr->Height+//10+
+            ((CBStr->Height*0.7)*(n));
  SendMessage(MOutput->Handle, WM_VSCROLL, SB_TOP, 0);
  SendMessage(MOutput->Handle, WM_HSCROLL, SB_TOP, 0);
  SetOpt();
@@ -670,7 +403,7 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
        Top = 200;
        Left = 200;
        Casesensitive->Checked = false;
-       Options = FFLOAT+SCF+NRM+CMP+IGR+UNS+HEX+CHR+WCH+OCT+fBIN+DAT+DEG+STR+ALL+MNU+FRC+FRI;
+       Options = FFLOAT+SCI+NRM+CMP+IGR+UNS+HEX+CHR+WCH+OCT+fBIN+DAT+DEG+STR+ALL+MNU+FRC+FRI;
        opacity = 255;
        binwide = 64;
       }
@@ -886,8 +619,8 @@ void __fastcall TCalcForm::ForcedfloatClick(TObject *Sender)
 void __fastcall TCalcForm::ScientificClick(TObject *Sender)
 {
  Scientific->Checked ^= 1;
- if (Scientific->Checked) Options |= SCF;
- else Options &= ~SCF;
+ if (Scientific->Checked) Options |= SCI;
+ else Options &= ~SCI;
 
  All->Checked = false;
  Options &= ~ALL;
@@ -1088,23 +821,6 @@ void __fastcall TCalcForm::InchClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TCalcForm::AutoClick(TObject *Sender)
-{
- int opt = ccalc->issyntax();
- Auto->Checked ^= 1;
- if (Auto->Checked)
-  {
-   Options |= AUTO;
-   opt |= AUTO;
-  }
- else
-  {
-   Options &= ~AUTO;
-   opt &= ~AUTO;
-  }
- ccalc->syntax(opt);
- CBStrChange(Sender);
-}
 //---------------------------------------------------------------------------
 
 void __fastcall TCalcForm::AllClick(TObject *Sender)
@@ -1134,8 +850,8 @@ void __fastcall TCalcForm::AllClick(TObject *Sender)
  else Options &= ~MIN;
  if (Forcedfloat->Checked) Options |= FFLOAT;
  else Options &= ~FFLOAT;
- if (Scientific->Checked) Options |= SCF;
- else Options &= ~SCF;
+ if (Scientific->Checked) Options |= SCI;
+ else Options &= ~SCI;
  if (Normalized->Checked) Options |= NRM;
  else Options &= ~NRM;
  if (Computing->Checked) Options |= CMP;
@@ -1232,7 +948,7 @@ void __fastcall TCalcForm::Opt2Mnu(void)
 {
  Escmin->Checked = Options & MIN;
  Forcedfloat->Checked = Options & FFLOAT;
- Scientific->Checked = Options & SCF;
+ Scientific->Checked = Options & SCI;
  Normalized->Checked = Options & NRM;
  Computing->Checked = Options & CMP;
  Integer->Checked = Options & IGR;
@@ -1247,7 +963,7 @@ void __fastcall TCalcForm::Opt2Mnu(void)
  String->Checked = Options & STR;
  Fraction->Checked = Options & FRC;
  Inch->Checked = Options & FRI;
- Auto->Checked = Options & AUTO;
+ Temperature->Checked = Options & FRH;
  if (Options & MNU)
   {
    CalcForm->MnCalc->Visible = true;
@@ -1270,4 +986,16 @@ void __fastcall TCalcForm::CBStrKeyUp(TObject *Sender, WORD &Key,
 //---------------------------------------------------------------------------
 
 
+
+
+void __fastcall TCalcForm::TemperatureClick(TObject *Sender)
+{
+ Temperature->Checked ^= 1;
+ if (Temperature->Checked) Options |= FRH;
+ else Options &= ~FRH;
+
+ All->Checked = false;
+ Options &= ~ALL;
+ CBStrChange(Sender);
+}
 
