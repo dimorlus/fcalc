@@ -9,8 +9,6 @@
 #include <cstdint>
 #endif
 
-
-
 extern int t2str(char * str, uint64_t sec);
 extern int b2str(char *str, const char *fmt, uint64_t b);
 extern int d2scistr(char *str, float__t d);

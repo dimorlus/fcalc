@@ -340,12 +340,12 @@ int b2scistr (char *str, float__t d)
 
 #ifdef _long_double_
    if ((rng > Empty) && (rng <= Quetta))
-    return sprintf (str, "%.4Lg%cB", dd, csci_plus[rng]);
+    return sprintf (str, "%.4Lg%ciB", dd, csci_plus[rng]);
    else
     return sprintf (str, "%.4Lg", d);
 #else  /*_long_double_*/
    if ((rng > Empty) && (rng <= Quetta))
-    return sprintf (str, "%.4g%cB", dd, csci_plus[rng]);
+    return sprintf (str, "%.4g%ciB", dd, csci_plus[rng]);
    else
     return sprintf (str, "%.4g", d);
 #endif /*_long_double_*/
@@ -360,11 +360,11 @@ int dgr2str (char *str, float__t radians)
  double min_full   = (degrees - deg) * 60.0;
  int min           = (int)min_full;
  double sec_full   = (min_full - min) * 60.0;
- int sec           = (int)(sec_full + 0.5); // Округляем секунды
+ int sec           = (int)(sec_full + 0.5); // Rounding seconds
 
  if (fabs (degrees) > 36000)
   return sprintf (str, "--%c--%c--%c", cdeg[0], cdeg[1], cdeg[2]);
- // Корректируем переполнение секунд и минут
+ // Seconds and minutes overflow correction
  if (sec == 60)
   {
    sec = 0;
@@ -376,7 +376,7 @@ int dgr2str (char *str, float__t radians)
    deg += 1;
   }
 
- // Формируем строку
+ // Format the string
  if (deg != 0)
   return sprintf (str, "%d%c%d%c%d%c", deg, cdeg[0], min, cdeg[1], sec, cdeg[2]);
  else if (min != 0)
@@ -421,7 +421,7 @@ int wchr2str1 (char *str, int i)
  wbuf[0] = (wchar_t)i & 0xffff;
  wbuf[1] = L'\0';
 
- // Заменяем WideCharToMultiByte на стандартную функцию
+ // Replace WideCharToMultiByte with standard function
  wcstombs (cbuf, wbuf, sizeof (cbuf));
  return sprintf (str, "'%s'W", cbuf);
 }
@@ -459,8 +459,6 @@ int nx_time2str (char *str, uint64_t time)
     return (int)strlen(str);
   }
   
-  //time_t safe_time = (time_t)time;
-  //gmtime_s(&t, &safe_time);
   t = *gmtime((time_t*)&time);
   return (int)strftime(str, 80, "%a, %b %d %H:%M:%S %Y", &t);
 }
@@ -470,17 +468,17 @@ int nx_time2str (char *str, uint64_t time)
 {
  struct tm t;
 
- // Проверяем что время находится в допустимом диапазоне для time_t (32-bit unix time)
- // time_t обычно 32-битный и поддерживает даты от 1970 до 2038 года
- if (time > 0x7FFFFFFF) // 2147483647 = максимальное значение для signed 32-bit (19 Jan 2038)
+ // Checking that the time is within the valid range for time_t (32-bit unix time)
+ // time_t is usually 32-bit and supports dates from 1970 to 2038
+ if (time > 0x7FFFFFFF) // 2147483647 = maximum value for signed 32-bit (19 Jan 2038)
   {
-   // Для больших значений возвращаем сообщение об ошибке
+   // For larger values, return an error message
    strcpy (str, "Date overflow (>2038)");
    return (int)strlen (str);
   }
 
  time_t safe_time = (time_t)time;
- gmtime_s (&t, &safe_time); // Используем безопасную версию функции с проверенным значением
+ gmtime_s (&t, &safe_time); // Using the safe version of the function with a checked value
  return (int)strftime (str, 80, "%a, %b %d %H:%M:%S %Y", &t);
 }
 #endif
