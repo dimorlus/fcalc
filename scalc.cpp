@@ -49,8 +49,8 @@
 #define M_PI_2l 1.5707963267948966192313216916398
 #define M_E     2.7182818284590452353602874713527
 #define PHI     1.6180339887498948482045868343656 //(1+sqrt(5))/2 golden ratio
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4244)
+#pragma warning(disable : 4996) // 'function': was declared deprecated
+#pragma warning(disable : 4244) // 'argument': conversion from 'type1' to 'type2', possible loss of data
 #endif //__BORLANDC__
 
 #define _WIN_
@@ -77,6 +77,7 @@ calculator::calculator (int cfg)
  sres[0]       = '\0';
  memset (hash_table, 0, sizeof hash_table);
  memset (v_stack, 0, sizeof v_stack);
+ string_list_head = nullptr;
  c_imaginary = 'i';
  // randomize();
  srand (static_cast<unsigned int> (time (nullptr)));
@@ -373,6 +374,8 @@ calculator::~calculator (void)
  symbol *sp;
  symbol *nsp;
 
+ clearAllStrings ();
+
  for (int i = 0; i < hash_table_size; i++)
   {
    if ((sp = hash_table[i]) != nullptr)
@@ -390,6 +393,45 @@ calculator::~calculator (void)
     }
   }
 }
+//---------------------------------------------------------------------------
+
+char *calculator::registerString (char *str)
+ {
+ if (str)
+  {
+   StringNode *node = new StringNode;
+   node->str        = str;
+   node->next       = string_list_head;
+   string_list_head = node;
+  }
+  return str;
+ }
+
+void calculator::clearAllStrings ()
+ {
+  StringNode *node = string_list_head;
+  while (node)
+   {
+    free (node->str);
+    StringNode *next = node->next;
+    delete node;
+    node = next;
+   }
+  string_list_head = nullptr;
+ }
+
+ char *calculator::dupString (const char *src)
+  {
+   if (!src) return nullptr;
+   size_t len = strlen (src);
+   char *dup   = (char *)malloc (len + 1);
+   if (dup)
+    {
+     strcpy (dup, src);
+     return registerString (dup);
+    }
+   return nullptr;
+  }
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
@@ -897,6 +939,9 @@ symbol *calculator::add (t_symbol tag, const char *name, void *func)
  sp->name      = uname;
  sp->val.tag   = tvINT;
  sp->val.ival  = 0;
+ sp->val.fval  = 0;
+ sp->val.imval = 0;
+ sp->val.sval  = nullptr;
  sp->next      = hash_table[h];
  hash_table[h] = sp;
  return sp;
@@ -1435,23 +1480,6 @@ void calculator::error (int pos, const char *msg)
  errpos = pos;
 }
 
-static void SafeFree (value &v)
-{
- if (v.tag == tvSTR && v.sval)
-  {
-   free (v.sval);
-   v.sval = nullptr;
-  }
-}
-
-static void DeepCopy (value &dest, const value &src)
-{
- dest = src;
- if (src.tag == tvSTR && src.sval)
-  {
-   dest.sval = strdup (src.sval);
-  }
-}
 
 t_operator calculator::scan (bool operand, bool percent)
 {
@@ -1742,8 +1770,12 @@ t_operator calculator::scan (bool operand, bool percent)
           scfg |= CHR;
           ival               = *(unsigned char *)(ipos - 1);
           v_stack[v_sp].sval = (char *)malloc (STRBUF);
+          if (v_stack[v_sp].sval)
+           {
           if (v_stack[v_sp].sval) v_stack[v_sp].sval[0] = *(ipos - 1);
           if (v_stack[v_sp].sval) v_stack[v_sp].sval[1] = '\0';
+            registerString (v_stack[v_sp].sval);
+           }
           ipos++;
          }
        }
@@ -1760,7 +1792,11 @@ t_operator calculator::scan (bool operand, bool percent)
           v_stack[v_sp].tag  = tvSTR;
           v_stack[v_sp].ival = 0;
           v_stack[v_sp].sval = (char *)malloc (STRBUF);
-          if (v_stack[v_sp].sval) strcpy (v_stack[v_sp].sval, sbuf);
+          if (v_stack[v_sp].sval)
+           {
+            strcpy (v_stack[v_sp].sval, sbuf);
+            registerString (v_stack[v_sp].sval);
+           }
           pos                 = ipos - buf + 1;
           v_stack[v_sp].pos   = pos;
           v_stack[v_sp++].var = nullptr;
@@ -1849,7 +1885,11 @@ t_operator calculator::scan (bool operand, bool percent)
       v_stack[v_sp].tag  = tvSTR;
       v_stack[v_sp].ival = 0;
       v_stack[v_sp].sval = (char *)malloc (STRBUF);
-      if (v_stack[v_sp].sval) strcpy (v_stack[v_sp].sval, sbuf);
+      if (v_stack[v_sp].sval)
+       {
+        strcpy (v_stack[v_sp].sval, sbuf);
+        registerString (v_stack[v_sp].sval);
+       }
       pos                 = ipos - buf + 1;
       v_stack[v_sp].pos   = pos;
       v_stack[v_sp++].var = nullptr;
@@ -1999,9 +2039,10 @@ t_operator calculator::scan (bool operand, bool percent)
       v_stack[v_sp].tag = tvCOMPLEX;
      }
     if (*fpos && (isalnum (*fpos & 0x7f) || *fpos == '@' || *fpos == '_' || *fpos == '?'))
-     {
+     { // Rollback to float if followed by identifier (e.g. 1k => 1.0k, but 1kB => 1k * B)
       fpos = sfpos;
       fval = sfval;
+      v_stack[v_sp].tag = tvFLOAT;
      }
      
     if (v_stack[v_sp].tag == tvCOMPLEX)
@@ -2076,7 +2117,7 @@ t_operator calculator::scan (bool operand, bool percent)
     }
    if (sym)
     {
-     DeepCopy (v_stack[v_sp], sym->val);
+     v_stack[v_sp]       = sym->val;
      v_stack[v_sp].pos   = pos;
      v_stack[v_sp++].var = sym;
      return (sym->tag == tsVARIABLE || sym->tag == tsCONSTANT) ? toOPERAND : toFUNC;
@@ -2141,18 +2182,17 @@ bool calculator::assign ()
      error (v.pos, "assignment to constant");
      return false;
     }
-   SafeFree (v.var->val);
-   DeepCopy (v.var->val, v);
+   v.var->val = v;
    return true;
   }
 }
 
 void calculator::clear_v_stack ()
 {
- // Очистка стека перед использованием
+ // Clear stack before using
  for (int i = 0; i < max_stack_size; ++i)
   {
-   if (v_stack[i].sval) free (v_stack[i].sval);
+   //if (v_stack[i].sval) free (v_stack[i].sval);
    v_stack[i].tag   = tvINT;
    v_stack[i].sval  = nullptr;
    v_stack[i].var   = nullptr;
@@ -2335,7 +2375,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            if (v_stack[0].sval)
             {
              strcpy (sres, v_stack[0].sval);
-             if (v_stack[0].sval) free (v_stack[0].sval);
+             //if (v_stack[0].sval) free (v_stack[0].sval);
              v_stack[0].sval = nullptr;
             }
            return v_stack[0].ival;
@@ -2347,11 +2387,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            if (v_stack[0].sval)
             {
              strcpy (sres, v_stack[0].sval);
-             if (v_stack[0].sval) free (v_stack[0].sval);
              v_stack[0].sval = nullptr;
             }
-           else
-            sres[0] = '\0';
+           else sres[0] = '\0'; // Clear sres if not a string result
+           v_stack[v_sp - 1].var = nullptr;
            v_stack[0].imval = 0.0;
            v_stack[0].fval  = 0.0;
            v_stack[0].ival  = 0;
@@ -2374,42 +2413,15 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        }
 
       case toCOMMA: // ,
-       n_args += 1;
+       n_args += 1; // Just separate arguments, no calculation, return value of the last one
        continue;
 
       case toSEMI: // ;
-       if (((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
-           || ((v_stack[v_sp - 1].imval != 0.0) || (v_stack[v_sp - 2].imval != 0.0)))
-        {
-         v_stack[v_sp - 2].fval  = v_stack[v_sp - 1].get ();
-         v_stack[v_sp - 2].imval = v_stack[v_sp - 1].imval;
-         v_stack[v_sp - 2].ival  = v_stack[v_sp - 1].ival;
-         v_stack[v_sp - 2].tag   = tvCOMPLEX;
-        }
-       else if ((v_stack[v_sp - 1].tag == tvINT) && (v_stack[v_sp - 2].tag == tvINT))
-        {
-         v_stack[v_sp - 2].fval  = v_stack[v_sp - 1].get ();
-         v_stack[v_sp - 2].imval = v_stack[v_sp - 1].imval;
-         v_stack[v_sp - 2].ival  = v_stack[v_sp - 1].ival;
-        }
-       else if ((v_stack[v_sp - 1].tag == tvSTR) && (v_stack[v_sp - 2].tag == tvSTR))
-        {
-         SafeFree (v_stack[v_sp - 2]);
-         DeepCopy (v_stack[v_sp - 2], v_stack[v_sp - 1]);
-        }
-       else if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
-        {
-         error (v_stack[v_sp - 2].pos, "Illegal string operation");
-         result_fval = qnan;   
-         return qnan;
-        }
-       else
-        {
-         v_stack[v_sp - 2].fval = v_stack[v_sp - 1].get ();
-         v_stack[v_sp - 2].tag  = tvFLOAT;
-        }
-       v_sp -= 1;
+       // For sub-expressions separated by ';', return the value of the last one
+       v_stack[v_sp - 2] = v_stack[v_sp - 1];
        v_stack[v_sp - 1].var = nullptr;
+       v_stack[v_sp - 1].sval  = nullptr;
+       v_sp -= 1;
        break;
 
       case toADD:    // +
@@ -2423,10 +2435,16 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          if (strlen (v_stack[v_sp - 2].sval) + strlen (v_stack[v_sp - 1].sval) < STRBUF)
           {
            char *new_s = (char *)malloc (STRBUF);
+           if (!new_s)
+            {
+             error (v_stack[v_sp - 2].pos, "Memory allocation failed");
+             result_fval = qnan;
+             return qnan;
+            }
            strcpy (new_s, v_stack[v_sp - 2].sval);
            strcat (new_s, v_stack[v_sp - 1].sval);
-           SafeFree (v_stack[v_sp - 2]);
            v_stack[v_sp - 2].sval = new_s;
+           registerString (v_stack[v_sp - 2].sval);
           }
          else
           {
@@ -2478,7 +2496,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            return qnan;
           }
         }
-       SafeFree (v_stack[v_sp]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3093,7 +3110,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) == 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         SafeFree (v_stack[v_sp - 2]);
         }
        else
         {
@@ -3102,7 +3118,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          v_stack[v_sp - 2].tag = tvINT;
         }
        v_sp -= 1;
-       SafeFree (v_stack[v_sp - 1]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3115,7 +3130,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) != 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         SafeFree (v_stack[v_sp - 2]);
         }
        else
         {
@@ -3124,7 +3138,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          v_stack[v_sp - 2].tag = tvINT;
         }
        v_sp -= 1;
-       SafeFree (v_stack[v_sp - 1]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3143,7 +3156,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) > 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         SafeFree (v_stack[v_sp - 2]);
         }
        else
         {
@@ -3151,7 +3163,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          v_stack[v_sp - 2].tag  = tvINT;
         }
        v_sp -= 1;
-       SafeFree (v_stack[v_sp - 1]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3170,7 +3181,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) >= 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         SafeFree (v_stack[v_sp - 2]);
         }
        else
         {
@@ -3178,7 +3188,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          v_stack[v_sp - 2].tag  = tvINT;
         }
        v_sp -= 1;
-       SafeFree (v_stack[v_sp - 1]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3197,7 +3206,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) < 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         SafeFree (v_stack[v_sp - 2]);
         }
        else
         {
@@ -3205,7 +3213,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          v_stack[v_sp - 2].tag  = tvINT;
         }
        v_sp -= 1;
-       SafeFree (v_stack[v_sp - 1]);
        v_stack[v_sp - 1].var = nullptr;
        break;
 
@@ -3224,8 +3231,8 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) <= 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         free (v_stack[v_sp - 2].sval);
-         v_stack[v_sp - 2].sval = nullptr;
+         //free (v_stack[v_sp - 2].sval);
+         //v_stack[v_sp - 2].sval = nullptr;
         }
        else
         {
@@ -3400,18 +3407,13 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          // v_stack[v_sp - 2] := v_stack[v_sp - 1]
          if ((v_stack[v_sp - 1].tag == tvSTR) && (v_stack[v_sp - 1].sval))
           {
-           SafeFree (v_stack[v_sp - 2].var->val);
-           DeepCopy (v_stack[v_sp - 2].var->val, v_stack[v_sp - 1]);
-           SafeFree (v_stack[v_sp - 2]);
-           DeepCopy (v_stack[v_sp - 2], v_stack[v_sp - 1]);
+           v_stack[v_sp - 2] = v_stack[v_sp - 2].var->val = v_stack[v_sp - 1];
            v_stack[v_sp - 2].tag = tvSTR;
-           SafeFree (v_stack[v_sp - 1]);
           }
          else
           v_stack[v_sp - 2] = v_stack[v_sp - 2].var->val = v_stack[v_sp - 1];
         }
        v_sp -= 1;
-       // v_stack[v_sp-1].var = nullptr;
        break;
 
       case toNOT: // !
@@ -3452,16 +3454,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         v_stack[v_sp - 1].fval  = -v_stack[v_sp - 1].fval;
         v_stack[v_sp - 1].imval = -v_stack[v_sp - 1].imval;
        }
-       //if (v_stack[v_sp - 1].tag == tvINT)
-       // {
-       //  v_stack[v_sp - 1].ival = -v_stack[v_sp - 1].ival;
-       // }
-       //else
-       // {
-       //  v_stack[v_sp - 1].fval  = -v_stack[v_sp - 1].fval;
-       //  v_stack[v_sp - 1].imval = -v_stack[v_sp - 1].imval;
-       // }
-       // no break
 
       case toPLUS: //+v
        if ((v_stack[v_sp - 1].tag == tvSTR))
@@ -3530,7 +3522,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                result_fval = qnan;
                return qnan;
               }
-             //if (scfg & CPX) v_stack[v_sp - 2].tag = tvCOMPLEX; // result should be complex
              ((void (*) (value *, value *, int))sym->func) (&v_stack[v_sp - 2], &v_stack[v_sp - 1],
                                                             sym->fidx);
              v_sp -= 1;
@@ -3543,7 +3534,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                result_fval = qnan;
                return qnan;
               }
-             //if (scfg & CPX) v_stack[v_sp - 3].tag = tvCOMPLEX; // result should be complex
              ((void (*) (value *, value *, value *, int))sym->func) (
                  &v_stack[v_sp - 3], &v_stack[v_sp - 2], &v_stack[v_sp - 1], sym->fidx);
              v_sp -= 2;
@@ -3574,11 +3564,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
               strncpy (sres, resStr ? resStr : "", STRBUF - 1);
               sres[STRBUF - 1] = '\0';
               if (sres[0]) scfg |= STR;
-              SafeFree (v_stack[v_sp - 2]);
-              v_stack[v_sp - 2].sval = strdup (sres);
+              v_stack[v_sp - 2].sval = dupString(sres);
               v_stack[v_sp - 2].fval = v_stack[v_sp - 1].get ();
               v_stack[v_sp - 2].ival = v_stack[v_sp - 1].ival;
-              v_stack[v_sp - 2].tag  = tvFLOAT; // tvINT;// tvSTR;
+              v_stack[v_sp - 2].tag  = tvSTR;
              }
              v_sp -= 1;
              break;
@@ -3676,13 +3665,13 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              (*(int_t (*) (char *, char *, int, value *))sym->func) // call prn(...)
                  (sres, // put result string in sres first
                   v_stack[v_sp - n_args].get_str (), n_args - 1, &v_stack[v_sp - n_args + 1]);
-
-             SafeFree (v_stack[v_sp - n_args - 1]);
-             v_stack[v_sp - n_args - 1].sval = strdup (sres);
+             if (sres[0]) scfg |= STR;
+             v_stack[v_sp - n_args - 1].sval = dupString(sres);
              v_stack[v_sp - n_args - 1].ival = 0;
-             v_stack[v_sp - n_args - 1].tag  = tvINT; // tvSTR;
+             v_stack[v_sp - n_args - 1].tag  = tvSTR;
 
-             if (n_args > 1)
+             if (n_args > 1) // if there are arguments other than the first string argument, return
+                             // the value of the first argument as well
               {
                v_stack[v_sp - n_args - 1].ival = v_stack[v_sp - n_args + 1].ival;
                if (v_stack[v_sp - n_args + 1].fval > maxdbl)
@@ -3735,7 +3724,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
               v_stack[v_sp - 2].fval  = out_re;
               v_stack[v_sp - 2].imval = out_im;
               v_stack[v_sp - 2].tag   = tvCOMPLEX;
-              v_stack[v_sp - 2].tag   = tvCOMPLEX;
              }
              v_sp -= 1;
              break;
@@ -3765,8 +3753,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              return qnan;
             }
           }
-         SafeFree (v_stack[v_sp - 1]);
-         v_stack[v_sp - 1].var = nullptr;
          o_sp -= 1;
          n_args = 1;
         }
