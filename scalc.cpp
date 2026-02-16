@@ -1,4 +1,3 @@
-
 #include <windows.h>
 #include "pch.h"
 
@@ -808,7 +807,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
        if (sres[0])
         {
          char strcstr[80];
-         sprintf (strcstr, "'%s'", sres);
+         sprintf (strcstr, "'%.64s'", sres);
          bsize += sprintf (str + bsize, "%65.64s S\r\n", strcstr);
          n++;
         }
@@ -1772,8 +1771,8 @@ t_operator calculator::scan (bool operand, bool percent)
           v_stack[v_sp].sval = (char *)malloc (STRBUF);
           if (v_stack[v_sp].sval)
            {
-          if (v_stack[v_sp].sval) v_stack[v_sp].sval[0] = *(ipos - 1);
-          if (v_stack[v_sp].sval) v_stack[v_sp].sval[1] = '\0';
+            if (v_stack[v_sp].sval) v_stack[v_sp].sval[0] = *(ipos - 1);
+            if (v_stack[v_sp].sval) v_stack[v_sp].sval[1] = '\0';
             registerString (v_stack[v_sp].sval);
            }
           ipos++;
@@ -2192,9 +2191,8 @@ void calculator::clear_v_stack ()
  // Clear stack before using
  for (int i = 0; i < max_stack_size; ++i)
   {
-   //if (v_stack[i].sval) free (v_stack[i].sval);
    v_stack[i].tag   = tvINT;
-   v_stack[i].sval  = nullptr;
+   v_stack[i].sval = nullptr;  
    v_stack[i].var   = nullptr;
    v_stack[i].pos   = 0;
    v_stack[i].ival  = 0;
@@ -2374,9 +2372,9 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            if (pimval) *pimval = 0;
            if (v_stack[0].sval)
             {
-             strcpy (sres, v_stack[0].sval);
-             //if (v_stack[0].sval) free (v_stack[0].sval);
-             v_stack[0].sval = nullptr;
+             strncpy (sres, v_stack[0].sval, STRBUF - 1); // Ensuring no buffer overflow
+             sres[STRBUF - 1] = '\0'; // Ensure null-termination
+             v_stack[0].sval  = nullptr;
             }
            return v_stack[0].ival;
           }
@@ -2386,8 +2384,9 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            if (piVal) *piVal = (__int64)v_stack[0].fval;
            if (v_stack[0].sval)
             {
-             strcpy (sres, v_stack[0].sval);
-             v_stack[0].sval = nullptr;
+             strncpy (sres, v_stack[0].sval, STRBUF - 1); // Ensuring no buffer overflow
+             sres[STRBUF - 1] = '\0';                     // Ensure null-termination
+             v_stack[0].sval  = nullptr;
             }
            else sres[0] = '\0'; // Clear sres if not a string result
            v_stack[v_sp - 1].var = nullptr;
@@ -2419,7 +2418,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
       case toSEMI: // ;
        // For sub-expressions separated by ';', return the value of the last one
        v_stack[v_sp - 2] = v_stack[v_sp - 1];
-       v_stack[v_sp - 1].var = nullptr;
+       v_stack[v_sp - 1].var   = nullptr;
        v_stack[v_sp - 1].sval  = nullptr;
        v_sp -= 1;
        break;
@@ -2432,9 +2431,16 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         }
        else if ((v_stack[v_sp - 1].tag == tvSTR) && (v_stack[v_sp - 2].tag == tvSTR))
         {
-         if (strlen (v_stack[v_sp - 2].sval) + strlen (v_stack[v_sp - 1].sval) < STRBUF)
+         int_t new_len = strlen (v_stack[v_sp - 2].sval) + strlen (v_stack[v_sp - 1].sval) + 1;
+         if (new_len > STRBUF-1)
           {
-           char *new_s = (char *)malloc (STRBUF);
+           error (v_stack[v_sp - 2].pos, "Resulting string is too long");
+           result_fval = qnan;
+           clear_v_stack ();
+           return qnan;
+          }
+          {
+           char *new_s = (char *)malloc (new_len);
            if (!new_s)
             {
              error (v_stack[v_sp - 2].pos, "Memory allocation failed");
@@ -2445,12 +2451,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            strcat (new_s, v_stack[v_sp - 1].sval);
            v_stack[v_sp - 2].sval = new_s;
            registerString (v_stack[v_sp - 2].sval);
-          }
-         else
-          {
-           error (v_stack[v_sp - 2].pos, "String buffer overflow");
-           result_fval = qnan;
-           return qnan;
           }
         }
        else if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
@@ -3231,8 +3231,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 2].ival = (strcmp (v_stack[v_sp - 2].sval, v_stack[v_sp - 1].sval) <= 0);
          v_stack[v_sp - 2].tag  = tvINT;
-         //free (v_stack[v_sp - 2].sval);
-         //v_stack[v_sp - 2].sval = nullptr;
         }
        else
         {
