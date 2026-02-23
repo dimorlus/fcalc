@@ -15,6 +15,7 @@
 
 #include <cstdlib> // for free() function
 
+
 // RW - set both by calc engine and application
 // WO - set only from application
 // RO - set only by calc engine
@@ -52,11 +53,9 @@
 #define TOP  (1 << 27) // (UI) Always on top
 #define IMUL (1 << 28) // (WO) Implicit multiplication
 #define OPT  (1 << 29) // (UI) Print options
-
+#define NIV  (1 << 31) // (UI) Not add functions and variables to the hash table (internal use only) 
 
 #define STRBUF 256 // bufer size for string operations
-
-#define _WCHAR_ // L'c' and 'c'W input format allow
 
 #ifdef __BORLANDC__
 
@@ -66,6 +65,7 @@ typedef __int64 int_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 unsigned_t;
 #else //__BORLANDC__
+
 #define _long_double_
 #include <cstdint>
 typedef int64_t int_t;
@@ -77,6 +77,13 @@ typedef long double float__t;
 #else
 typedef double float__t;
 #endif
+
+#ifdef __BORLANDC__
+const float__t qnan = 0.0/0.0;
+#else
+constexpr float__t qnan = std::numeric_limits<float__t>::quiet_NaN ();
+#endif
+
 class value;
 class symbol;
 
@@ -121,11 +128,13 @@ typedef union
 
 enum t_value
 {
+ tvERR,
  tvINT,
  tvFLOAT,
  tvPERCENT,
  tvCOMPLEX,
- tvSTR
+ tvSTR,
+ tvUFUNCT
 };
 
 enum t_operator
@@ -181,6 +190,7 @@ enum t_operator
  toSETPOW,  // toSETPOW represents a set power operator
  toSEMI,    // toSEMI represents a semicolon operator
  toCOMMA,   // toCOMMA represents a comma operator
+ toCONTINUE, // toCONTINUE represents a continue operator for continue scanning
  toTERMINALS // toTERMINALS must be the last operator in the list and represents the total number of
              // operators
 };
@@ -208,8 +218,31 @@ enum t_symbol
  tsSIFUNC1, // int f(char *s)
  tsVFUNC1,  // void vfunc(value* res, value* arg, int idx)
  tsVFUNC2,  // void vfunc(value* res, value* arg1, value* arg2, int idx)
+ tsUFUNCT,   // User-defined function
  tsNUM
 };
+
+#define MASK_ALL 0xffff
+#define MASK_NONE 0x0000
+#define MASK_VARIABLE (1<< tsVARIABLE) // tsVARIABLE represents a variable symbol
+#define MASK_CONSTANT (1<< tsCONSTANT) // tsCONSTANT represents a constant symbol
+#define MASK_IFUNCF1 (1<< tsIFUNCF1) // tsIFUNCF1 represents an int function with one float argument
+#define MASK_SFUNCF1 (1<< tsSFUNCF1) // tsSFUNCF1 represents a char* function with one float argument
+#define MASK_IFUNC1 (1<< tsIFUNC1) // tsIFUNC1 represents an int function with one int argument
+#define MASK_IFUNC2 (1<< tsIFUNC2) // tsIFUNC2 represents an int function with two int arguments
+#define MASK_FFUNC1 (1<< tsFFUNC1) // tsFFUNC1 represents a float function with one float argument
+#define MASK_CFUNCC1 (1<< tsCFUNCC1) // tsCFUNCC1 represents a complex function with one complex argument
+#define MASK_FFUNCC1 (1<< tsFFUNCC1) // tsFFUNCC1 represents a float function with one complex argument
+#define MASK_FFUNC2 (1<< tsFFUNC2) // tsFFUNC2 represents a float function with two float arguments
+#define MASK_FFUNC3 (1<< tsFFUNC3) // tsFFUNC3 represents a float function with three float arguments
+#define MASK_IFFUNC3 (1<< tsIFFUNC3) // tsIFFUNC3 represents an int function with two float arguments and one int argument
+#define MASK_PFUNCn (1<< tsPFUNCn) // tsPFUNCn represents a printf function with a variable number of arguments
+#define MASK_SFUNCF2 (1<< tsSFUNCF2) // tsSFUNCF2 represents a float function with two float arguments
+#define MASK_SIFUNC1 (1<< tsSIFUNC1) // tsSIFUNC1 represents an int function with one char* argument
+#define MASK_VFUNC1 (1<< tsVFUNC1) // tsVFUNC1 represents a void function with one value argument and one int argument
+#define MASK_VFUNC2 (1<< tsVFUNC2) // tsVFUNC2 represents a void function with two value arguments and one int argument
+#define MASK_UFUNCT (1<< tsUFUNCT) // tsUFUNCT represents a user-defined function
+#define MASK_DEFAULT (MASK_CONSTANT | MASK_IFUNCF1 | MASK_SFUNCF1 | MASK_IFUNC1 | MASK_IFUNC2 | MASK_FFUNC1 | MASK_CFUNCC1 | MASK_FFUNCC1 | MASK_FFUNC2 | MASK_FFUNC3 | MASK_IFFUNC3 | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 | MASK_VFUNC2)
 
 enum v_func
 {
@@ -273,7 +306,6 @@ class value
   pos   = 0;
   sval  = nullptr;
  }
-
 
  inline float__t get () { return tag == tvINT ? (float__t)ival : fval; }
 
@@ -342,23 +374,29 @@ class calculator
  float__t result_imval; // Imaginary part of complex result
  t_value result_tag; // Type of result
 
+ 
  char *registerString (char *str); // Register a string in the string list and return the registered string pointer
  void clearAllStrings (); // Clear all strings in the string list
  char *dupString (const char *src); // Duplicate a string and register it in the string list
+ void destroyvars (void); // Destroy all variables in the hash table
+ void dupstrvars (void); // Duplicate string variables in the hash table (used when copying the calculator state)
 
  inline unsigned string_hash_function (const char *p); // Hash function for strings
  symbol *add (t_symbol tag, const char *name, void *func = nullptr); // Add a symbol to the hash table
  symbol *add (t_symbol tag, v_func fidx, const char *name,
               void *func = nullptr); // Add a symbol with function index to the hash table
  symbol *find (const char *name);    // Find a symbol in the hash table by name
+ symbol *addUF (const char *name, const char *expr); // Add a user-defined function to the calculator
+                                                    // with the given name and expression
  t_operator scan (bool operand,
-       bool percent); // Scan the next token in the expression and return its operator type
+                  bool percent); // Scan the next token in the expression and return its operator type
  void error (int pos, const char *msg); // Report an error at the given position with the specified message
+ void errorf (int pos, const char *fmt, ...); // Report an error at the given position with a formatted message
  inline void error (const char *msg)
  {
   error (pos - 1, msg);
  } // Report an error at the current position with the specified message
- bool assign (); // Assign a value to a variable
+ bool set_op (); // Assign a value to a variable
 
  bool isCMP (char *&fpos); // Check if the current position is a computing format
  int hscanf (char *str, int_t &ival,
@@ -379,22 +417,20 @@ class calculator
  void addim (void); // Add imaginary unit
  
  public:
- calculator (int cfg = PAS + SCI + UPCASE); // Constructor with optional syntax configuration
-   inline void syntax (int cfg = PAS + SCI + UPCASE + FFLOAT)
-   {
-    scfg = cfg;
-   } // Set syntax configuration
-   inline int issyntax (void) { return scfg; } // Get current syntax configuration
-   inline char *error (void) { return err; }   // Get error message
-   inline int errps (void) { return errpos; }; // Get error position
-   inline char *Sres (void) { return sres; };  // Get string result
-   inline char Ichar (void)
-   {
-    return c_imaginary;
-   }; // Get the character used for the imaginary unit
+ calculator (int cfg = PAS + SCI + UPCASE,
+             symbol **symtab = nullptr,
+             int mask=MASK_DEFAULT); // Constructor with optional syntax configuration
+ inline void syntax (int cfg = PAS + SCI + UPCASE + FFLOAT)  { scfg = cfg; } // Set syntax configuration
+ inline int issyntax (void) { return scfg; } // Get current syntax configuration
+ inline char *error (void) { return err; }   // Get error message
+ inline int errps (void) { return errpos; }; // Get error position
+ inline char *Sres (void) { return sres; };  // Get string result
+ inline char Ichar (void) { return c_imaginary;}; // Get the character used for the imaginary unit
 
  float__t AddConst (const char *name, float__t val); // Add a constant to the calculator and return its value
  float__t AddVar (const char *name, float__t val); // Add a variable to the calculator and return its value
+
+ void addvar (const char *name, value &val); // Add a variable with a specified value to the calculator
  void addfconst (const char *name, float__t val); // Add a floating-point constant to the calculator
  void addfvar (const char *name, float__t val); // Add a floating-point variable to the calculator
  void addivar (const char *name, int_t val); // Add an integer variable to the calculator
@@ -404,10 +440,14 @@ class calculator
  int varlist (char *buf, int bsize,
               int *maxlen = nullptr); // Get a list of variables in the calculator and store it in the provided
                           // buffer, with an optional maximum length for variable names
- float__t
- evaluate (char *expr, __int64 *piVal = nullptr,
+ float__t  evaluate (char *expr, __int64 *piVal = nullptr,
            float__t *pimval = nullptr); // Evaluate an expression and return the result as a floating-point value,
                        // with optional pointers to store integer and imaginary results
+ int64_t get_int_res () { return result_ival; };
+ float__t get_re_res () { return result_fval; };
+ float__t get_im_res () { return result_imval; };
+ t_value get_res_tag () { return result_tag; };
+ char *get_str_res () { return result_tag == tvSTR ? sres : nullptr; };
 
  int print (char *str, int Options, int binwide,
             int *size = nullptr); // Print a string representation of the result with specified
@@ -422,4 +462,4 @@ extern bool IsNaNL (const long double ldVal); // Function to check if a long dou
                                               // value is NaN (Not a Number)
 #define isnan(a) (a != a) // Macro to check if a value is NaN (Not a Number) by comparing it to itself
 
- #endif // scalcH
+#endif // scalcH

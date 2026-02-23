@@ -1,3 +1,4 @@
+
 #include <windows.h>
 #include "pch.h"
 
@@ -53,7 +54,10 @@
 #endif //__BORLANDC__
 
 #define _WIN_
+#define _WCHAR_ // L'c' and 'c'W input format allow
 #define _ENABLE_PREIMAGINARY_
+#define _STR_VAR_FREE_ 
+
 
 float__t Const (void *clc, char *name, float__t x)
 {
@@ -65,8 +69,14 @@ float__t Var (void *clc, char *name, float__t x)
  return ((calculator *)clc)->AddVar (name, x);
 }
 
-calculator::calculator (int cfg)
+calculator::calculator (int cfg, symbol **symtab, int copyMask)
 {
+ v_sp         = 0;    // Clear the value stack pointer
+ o_sp         = 0;    // Clear the operator stack pointer
+ result_fval  = qnan; // Clear the floating-point result
+ result_imval = 0.0;  // Clear the imaginary result
+ result_ival  = 0;    // Clear the integer result
+ buf           = nullptr;
  errpos        = 0;
  pos           = 0;
  expr          = false;
@@ -74,12 +84,57 @@ calculator::calculator (int cfg)
  err[0]        = '\0';
  scfg          = cfg;
  sres[0]       = '\0';
- memset (hash_table, 0, sizeof hash_table);
  memset (v_stack, 0, sizeof v_stack);
  string_list_head = nullptr;
  c_imaginary = 'i';
  // randomize();
  srand (static_cast<unsigned int> (time (nullptr)));
+ memset (hash_table, 0, sizeof hash_table);
+
+ // Copy symbols from the provided symbol table
+ // The function should create a new hashed linked list 
+ // from the existing one, duplicate the names, and create 
+ // copies of string variables that will be deleted in 
+ // the destructor. At the same time, it should allow 
+ // flexible selection of which nodes to copy and which 
+ // not (depending on the value of the tag field). 
+ // All pointers freed in the destructor must be 
+ // recreated; the rest can be copied.
+ if (symtab)
+  {
+   for (int i = 0; i < hash_table_size; i++)
+    {
+     symbol *src = symtab[i];
+     symbol **dst = &hash_table[i];
+
+     while (src)
+      {
+       // Check the mask: tsUFUNCT is always skipped to avoid recursion
+       // Other tags are checked against the copyMask
+       if (src->tag != tsUFUNCT && (copyMask & (1 << src->tag)))
+        {
+         symbol *ns = new symbol;
+         *ns        = *src;  // Copy all fields (tag, fidx, func, val)
+
+         // name always duplicated — destroyvars() frees it using free()
+         ns->name = src->name ? strdup (src->name) : nullptr;
+
+         // val.sval for string variables — duplicate if _STR_VAR_FREE_ is defined
+         if ((src->tag == tsVARIABLE) && (src->val.tag == tvSTR) && src->val.sval)
+          ns->val.sval = strdup (src->val.sval);
+
+         // func for tsUFUNCT is not copied (see condition above),
+         // for other func — pointer to static function, copy as is
+
+         ns->next = nullptr;
+         *dst     = ns;
+         dst      = &ns->next;
+        }
+       src = src->next;
+      }
+    }
+   return;
+  }
 
  add (tsSFUNCF2, "const", (void *)Const);
  add (tsSFUNCF2, "var", (void *)Var);
@@ -370,10 +425,14 @@ calculator::calculator (int cfg)
 
 calculator::~calculator (void)
 {
+ clearAllStrings ();
+ destroyvars ();
+}
+//---------------------------------------------------------------------------
+void calculator::destroyvars (void) // Free all symbols in the hash table
+{
  symbol *sp;
  symbol *nsp;
-
- clearAllStrings ();
 
  for (int i = 0; i < hash_table_size; i++)
   {
@@ -382,7 +441,15 @@ calculator::~calculator (void)
      do
       {
        nsp = sp->next;
-       free (sp->name);
+#ifdef _STR_VAR_FREE_
+       if ((sp->tag == tsVARIABLE) && (sp->val.tag == tvSTR))
+        {
+         if (sp->val.sval) free (sp->val.sval);
+         sp->val.sval = nullptr;
+        }
+#endif //_STR_VAR_FREE_
+       if (sp->tag == tsUFUNCT) free (sp->func);
+       if (sp->name) free (sp->name);
        sp->name = nullptr;
        delete sp;
        sp            = nsp;
@@ -392,9 +459,28 @@ calculator::~calculator (void)
     }
   }
 }
-//---------------------------------------------------------------------------
 
-char *calculator::registerString (char *str)
+void calculator::dupstrvars (void) // Duplicate string variables in the hash table
+{
+ symbol *sp;
+ for (int i = 0; i < hash_table_size; i++)
+  {
+   if ((sp = hash_table[i]))
+    {
+     do
+      {
+       if ((sp->tag == tsVARIABLE) && (sp->val.tag == tvSTR))
+        {
+         sp->val.sval = strdup (sp->val.sval);
+        }
+       sp = sp->next;
+      }
+     while (sp);
+    }
+  }
+}
+
+char *calculator::registerString (char *str) // Register a string in the string list for later cleanup
  {
  if (str)
   {
@@ -406,7 +492,7 @@ char *calculator::registerString (char *str)
   return str;
  }
 
-void calculator::clearAllStrings ()
+void calculator::clearAllStrings () // Free all registered strings in the string list
  {
   StringNode *node = string_list_head;
   while (node)
@@ -419,7 +505,7 @@ void calculator::clearAllStrings ()
   string_list_head = nullptr;
  }
 
- char *calculator::dupString (const char *src)
+ char *calculator::dupString (const char *src) // Duplicate a string and register it for cleanup
   {
    if (!src) return nullptr;
    size_t len = strlen (src);
@@ -446,13 +532,13 @@ int calculator::print (char *str, int Options, int binwide, int *size)
    return n;
   }
 
- if (IsNaN (result_fval))
+ if (IsNaN (result_fval)||result_tag == tvERR)
   {
    if (err[0])
     {
      int ep = errpos;
      if (ep < 0) ep = 0;
-     if (ep > 0) ep--; // Перемещаем позицию ошибки на символ перед ней
+     if (ep > 0) ep--; // Move the error position to the character before it
      if ((ep < 64))
       {
        char binstr[80];
@@ -521,9 +607,6 @@ int calculator::print (char *str, int Options, int binwide, int *size)
        dgr2str (cphi, phi);
        sprintf (imstr, "|%.8Lg|(%s) %.16Lg%+.16Lg%c", (long double)r, cphi,
                 (long double)result_fval, (long double)result_imval, c_imaginary);
-
-       //sprintf (imstr, "%.16Lg%+.16Lg%c", (long double)result_fval, (long double)result_imval,
-       //         c_imaginary);
        bsize += sprintf (str + bsize, "%65.64s f\r\n", imstr);
        n++;
       }
@@ -867,7 +950,8 @@ int calculator::varlist (char *buf, int bsize, int *maxlen)
  return lineCount;
 }
 
-unsigned calculator::string_hash_function (const char *p)
+// A simple hash function for strings (djb2 by Dan Bernstein)
+unsigned calculator::string_hash_function (const char *p) 
 {
  unsigned h = 0, g;
  while (*p)
@@ -886,59 +970,30 @@ unsigned calculator::string_hash_function (const char *p)
  return h;
 }
 
+// Add a symbol to the hash table, or return the existing symbol if it already exists
 symbol *calculator::add (t_symbol tag, v_func fidx, const char *name, void *func)
 {
- char *uname = strdup (name);
-
- unsigned h = string_hash_function (uname) % hash_table_size;
  symbol *sp;
+ unsigned h = string_hash_function (name) % hash_table_size;
  for (sp = hash_table[h]; sp != nullptr; sp = sp->next)
   {
    if (scfg & UPCASE)
     {
-     if (stricmp (sp->name, uname) == 0) return sp;
+     if (stricmp (sp->name, name) == 0) return sp;
     }
    else
     {
-     if (strcmp (sp->name, uname) == 0) return sp;
+     if (strcmp (sp->name, name) == 0) return sp;
     }
   }
  sp            = new symbol;
  sp->tag       = tag;
  sp->fidx      = fidx;
  sp->func      = func;
- sp->name      = uname;
- sp->val.tag   = tvINT;
+ sp->name      = strdup (name);
+ sp->val.tag   = tvERR; // tvINT;
  sp->val.ival  = 0;
- sp->next      = hash_table[h];
- hash_table[h] = sp;
- return sp;
-}
-
-symbol *calculator::add (t_symbol tag, const char *name, void *func)
-{
- char *uname = strdup (name);
-
- unsigned h = string_hash_function (uname) % hash_table_size;
- symbol *sp;
- for (sp = hash_table[h]; sp != nullptr; sp = sp->next)
-  {
-   if (scfg & UPCASE)
-    {
-     if (stricmp (sp->name, uname) == 0) return sp;
-    }
-   else
-    {
-     if (strcmp (sp->name, uname) == 0) return sp;
-    }
-  }
- sp            = new symbol;
- sp->tag       = tag;
- sp->func      = func;
- sp->name      = uname;
- sp->val.tag   = tvINT;
- sp->val.ival  = 0;
- sp->val.fval  = 0;
+ sp->val.fval  = qnan;
  sp->val.imval = 0;
  sp->val.sval  = nullptr;
  sp->next      = hash_table[h];
@@ -946,6 +1001,38 @@ symbol *calculator::add (t_symbol tag, const char *name, void *func)
  return sp;
 }
 
+// Add a symbol to the hash table, or return the existing symbol if it already exists (without
+// function index)
+symbol *calculator::add (t_symbol tag, const char *name, void *func)
+{
+ symbol *sp;
+ unsigned h = string_hash_function (name) % hash_table_size;
+ for (sp = hash_table[h]; sp != nullptr; sp = sp->next)
+  {
+   if (scfg & UPCASE)
+    {
+     if (stricmp (sp->name, name) == 0) return sp;
+    }
+   else
+    {
+     if (strcmp (sp->name, name) == 0) return sp;
+    }
+  }
+ sp            = new symbol;
+ sp->tag       = tag;
+ sp->func      = func;
+ sp->name      = strdup (name);
+ sp->val.tag   = tvERR; // tvINT;
+ sp->val.ival  = 0;
+ sp->val.fval  = qnan;
+ sp->val.imval = 0;
+ sp->val.sval  = nullptr;
+ sp->next      = hash_table[h];
+ hash_table[h] = sp;
+ return sp;
+}
+
+// Add a constant to the hash table, or return an error if it already exists
 float__t calculator::AddConst (const char *name, float__t val)
 {
  if (find (name))
@@ -957,16 +1044,18 @@ float__t calculator::AddConst (const char *name, float__t val)
  return val;
 }
 
+// Add a variable to the hash table, or return an error if it already exists
 float__t calculator::AddVar (const char *name, float__t val)
 {
  addfvar (name, val);
  return val;
 }
 
+// Find a symbol in the hash table by name, or return nullptr if it doesn't exist
 symbol *calculator::find (const char *name)
 {
- unsigned h = string_hash_function (name) % hash_table_size;
  symbol *sp;
+ unsigned h = string_hash_function (name) % hash_table_size;
  for (sp = hash_table[h]; sp != nullptr; sp = sp->next)
   {
    if (scfg & UPCASE)
@@ -981,20 +1070,74 @@ symbol *calculator::find (const char *name)
  return nullptr;
 }
 
+// Add a user-defined function to the hash table, or return an error if it already exists
+symbol *calculator::addUF (const char *name, const char *expr)
+{
+ symbol *sp = find (name);
+ 
+ if (sp && sp->tag == tsUFUNCT)
+  {
+   // redefine user function.
+   if (sp->func)
+    {
+     if (strcmp ((char*)sp->func, expr) == 0)
+      return sp; // If the existing function is the same as the new one, return it
+     free (sp->func);
+     sp->func = strdup (expr);
+    }
+   return sp;
+  }
+ if (sp) 
+  return nullptr; // If a symbol with the same name exists but is not a user function, return an error
+
+ // If no existing symbol is found, add the new user function to the hash table
+ unsigned h    = string_hash_function (name) % hash_table_size;
+ sp            = new symbol;
+ sp->tag       = tsUFUNCT;
+ sp->func      = strdup(expr);
+ sp->name      = strdup(name);
+ sp->val.tag   = tvUFUNCT;
+ sp->val.ival  = 0;
+ sp->val.fval  = 0;
+ sp->val.imval = 0;
+ sp->val.sval  = nullptr;
+ sp->next      = hash_table[h];
+ hash_table[h] = sp;
+
+ return sp;
+}
+// Add a float constant to the hash table
 void calculator::addfconst (const char *name, float__t val)
 {
  symbol *sp   = add (tsCONSTANT, name);
  sp->val.tag  = tvFLOAT;
  sp->val.fval = val;
+ sp->val.ival = 0;
+ sp->val.imval = 0;
 }
 
+// Add a float variable to the hash table
 void calculator::addfvar (const char *name, float__t val)
 {
  symbol *sp   = add (tsVARIABLE, name);
  sp->val.tag  = tvFLOAT;
  sp->val.fval = val;
+ sp->val.ival  = 0;
+ sp->val.imval = 0;
 }
 
+// Add  variable to the hash table
+void calculator::addvar (const char *name, value &val)
+{
+ symbol *sp   = add (tsVARIABLE, name);
+ sp->val.tag  = val.tag;
+ sp->val.fval = val.fval;
+ sp->val.ival = val.ival;
+ sp->val.imval = val.imval;
+ sp->val.sval = val.sval;
+}
+
+// Add an imaginary constant to the hash table (if enabled)
 void calculator::addim ()
 {
 #ifdef _ENABLE_PREIMAGINARY_
@@ -1009,21 +1152,28 @@ void calculator::addim ()
 #endif // _ENABLE_PREIMAGINARY_
 }
 
+// Add an integer constant to the hash table
 void calculator::addivar (const char *name, int_t val)
 {
  symbol *sp   = add (tsCONSTANT, name);
  sp->val.tag  = tvINT;
  sp->val.ival = val;
+ sp->val.fval = (float__t)val;
+ sp->val.imval = 0;
 }
 
+// Add an integer variable to the hash table
 void calculator::addlvar (const char *name, float__t fval, int_t ival)
 {
  symbol *sp   = add (tsCONSTANT, name);
  sp->val.tag  = tvINT;
  sp->val.fval = fval;
  sp->val.ival = ival;
+ sp->val.imval = 0;
 }
 
+// Parse a hexadecimal string and convert it to an integer value, returning the number of characters
+// parsed
 int calculator::hscanf (char *str, int_t &ival, int &nn)
 {
  int_t res = 0;
@@ -1055,6 +1205,8 @@ int calculator::hscanf (char *str, int_t &ival, int &nn)
  return 0;
 }
 
+// Parse a binary string and convert it to an integer value, returning the number of characters
+// parsed
 int calculator::bscanf (char *str, int_t &ival, int &nn)
 {
  int_t res = 0;
@@ -1077,6 +1229,8 @@ int calculator::bscanf (char *str, int_t &ival, int &nn)
  return 0;
 }
 
+// Parse an octal string and convert it to an integer value, returning the number of characters
+// parsed
 int calculator::oscanf (char *str, int_t &ival, int &nn)
 {
  int_t res = 0;
@@ -1099,6 +1253,8 @@ int calculator::oscanf (char *str, int_t &ival, int &nn)
  return 0;
 }
 
+// Parse a string that may be hexadecimal, octal, or an escape sequence, and convert it to an
+// integer
 int calculator::xscanf (char *str, int len, int_t &ival, int &nn)
 {
  int_t res = 0;
@@ -1232,6 +1388,7 @@ int calculator::xscanf (char *str, int len, int_t &ival, int &nn)
  return 0;
 }
 
+// Parse a string that may contain degrees, minutes, and seconds, and convert it to radians
 float__t calculator::dstrtod (char *s, char **endptr)
 {
  const char cdeg[]     = { '`', '\'', '\"' }; //` - degrees, ' - minutes, " - seconds
@@ -1261,6 +1418,8 @@ float__t calculator::dstrtod (char *s, char **endptr)
  return res;
 }
 
+// Parse a string that may contain centuries, years, weeks, days, hours, minutes, and seconds, and
+// convert it to seconds
 // 1:c1:y1:d1:h1:m1:s  => 189377247661s
 float__t calculator::tstrtod (char *s, char **endptr)
 {
@@ -1297,6 +1456,7 @@ float__t calculator::tstrtod (char *s, char **endptr)
  return res;
 }
 
+// Parse a string that may contain an engineering suffix (k, M, G, etc.) and apply the appropriate
 // https://en.wikipedia.org/wiki/Metric_prefix
 // process expression like 1k56 => 1.56k (maximum 3 digits)
 void calculator::engineering (float__t mul, char *&fpos, float__t &fval)
@@ -1315,6 +1475,7 @@ void calculator::engineering (float__t mul, char *&fpos, float__t &fval)
  fval += (fract * mul) / div;
 }
 
+// Check if the next characters are "B" or "iB" for computing format, and set the CMP flag if found
 bool calculator::isCMP (char *&fpos)
 {
  if (*fpos == 'B')
@@ -1333,6 +1494,7 @@ bool calculator::isCMP (char *&fpos)
  return false;
 }
 
+// Parse a string that may contain a scientific suffix (k, M, G, etc.) and apply the appropriate
 void calculator::scientific (char *&fpos, float__t &fval)
 {
  if (*(fpos - 1) == 'E') fpos--;
@@ -1473,13 +1635,23 @@ void calculator::scientific (char *&fpos, float__t &fval)
   }
 }
 
+// Set an error message with the given position and message text
 void calculator::error (int pos, const char *msg)
 {
  sprintf (err, "Error: %s at %i", msg, pos);
  errpos = pos;
 }
 
+void calculator::errorf (int pos, const char *fmt, ...)
+{
+ va_list args;
+ va_start(args, fmt);
+ vsprintf(err, fmt, args);
+ va_end(args);
+ errpos = pos;
+}
 
+// Skip whitespace and parse the next operator from the input buffer, returning the operator type
 t_operator calculator::scan (bool operand, bool percent)
 {
  char name[max_expression_length], *np;
@@ -1487,38 +1659,38 @@ t_operator calculator::scan (bool operand, bool percent)
  while (isspace (buf[pos] & 0x7f)) pos += 1;
  switch (buf[pos++])
   {
-  case '\0':
-   return toEND;
+  case '\0': 
+   return toEND; // end of input
   case '(':
    return toLPAR;
   case ')':
    return toRPAR;
   case '+':
-   if (buf[pos] == '+')
+   if (buf[pos] == '+') // (RO) ++ operator
     {
      pos += 1;
      return operand ? toPREINC : toPOSTINC;
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) += operator
     {
      pos += 1;
      return toSETADD;
     }
    return operand ? toPLUS : toADD;
   case '-':
-   if (buf[pos] == '-')
+   if (buf[pos] == '-') // (RO) -- operator
     {
      pos += 1;
      return operand ? toPREDEC : toPOSTDEC;
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) -= operator
     {
      pos += 1;
      return toSETSUB;
     }
    return operand ? toMINUS : toSUB;
   case '!':
-   if (buf[pos] == '=')
+   if (buf[pos] == '=') // (RO) != operator
     {
      pos += 1;
      return toNE;
@@ -1527,16 +1699,16 @@ t_operator calculator::scan (bool operand, bool percent)
   case '~':
    return toCOM;
   case ';':
-   if (buf[pos] == ';')
+   if (buf[pos] == ';') // (RO) ;; operator (comment to end of line)
     {
      pos += 1;
      return toEND;
     } 
    return toSEMI;
   case '*':
-   if (buf[pos] == '*')
+   if (buf[pos] == '*') // (RO) ** or **= operator
     {
-     if (buf[pos + 1] == '=')
+     if (buf[pos + 1] == '=') // (RO) **= operator
       {
        pos += 2;
        return toSETPOW;
@@ -1544,67 +1716,67 @@ t_operator calculator::scan (bool operand, bool percent)
      pos += 1;
      return toPOW;
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) *= operator
     {
      pos += 1;
      return toSETMUL;
     }
    return toMUL;
   case '/':
-   if (buf[pos] == '=')
+   if (buf[pos] == '=') // (RO) /= operator
     {
      pos += 1;
      return toSETDIV;
     }
-   else if (buf[pos] == '/')
+   else if (buf[pos] == '/') // (RO) // operator (parallel resistors)
     {
      pos += 1;
      return toPAR;
     }
    return toDIV;
   case '%':
-   if (buf[pos] == '=')
+   if (buf[pos] == '=') // (RO) %= operator
     {
      pos += 1;
      return toSETMOD;
     }
-   else if (buf[pos] == '%')
+   else if (buf[pos] == '%') // (RO) %% operator (percent)
     {
      pos += 1;
      return toPERCENT;
     }
    return toMOD;
   case '<':
-   if (buf[pos] == '<')
+   if (buf[pos] == '<') // (RO) << or <<= operator
     {
-     if (buf[pos + 1] == '=')
+     if (buf[pos + 1] == '=') // (RO) <<= operator
       {
        pos += 2;
        return toSETASL;
       }
-     else
+     else // (RO) << operator
       {
        pos += 1;
        return toASL;
       }
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) <= operator
     {
      pos += 1;
      return toLE;
     }
-   else if (buf[pos] == '>')
+   else if (buf[pos] == '>') // (RO) <> operator (not equal)
     {
      pos += 1;
      return toNE;
     }
    return toLT;
   case '>':
-   if (buf[pos] == '>')
+   if (buf[pos] == '>') // (RO) >> or >>= operator
     {
-     if (buf[pos + 1] == '>')
+     if (buf[pos + 1] == '>') // (RO) >>> or >>>= operator
       {
-       if (buf[pos + 2] == '=')
+       if (buf[pos + 2] == '=') // (RO) >>>= operator
         {
          pos += 3;
          return toSETLSR;
@@ -1612,25 +1784,25 @@ t_operator calculator::scan (bool operand, bool percent)
        pos += 2;
        return toLSR;
       }
-     else if (buf[pos + 1] == '=')
+     else if (buf[pos + 1] == '=') // (RO) >>= operator
       {
        pos += 2;
        return toSETASR;
       }
-     else
+     else // (RO) >> operator
       {
        pos += 1;
        return toASR;
       }
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) >= operator
     {
      pos += 1;
      return toGE;
     }
    return toGT;
   case '=':
-   if (buf[pos] == '=')
+   if (buf[pos] == '=') // (RO) == operator
     {
      scfg &= ~PAS;
      pos += 1;
@@ -1641,7 +1813,7 @@ t_operator calculator::scan (bool operand, bool percent)
    else
     return toSET;
   case ':':
-   if (buf[pos] == '=')
+   if (buf[pos] == '=') // (RO) := operator
     {
      scfg |= PAS;
      pos += 1;
@@ -1650,24 +1822,24 @@ t_operator calculator::scan (bool operand, bool percent)
    error ("syntax error");
    return toERROR;
   case '&':
-   if (buf[pos] == '&')
+   if (buf[pos] == '&') // (RO) && operator
     {
      pos += 1;
      return toAND;
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) &= operator
     {
      pos += 1;
      return toSETAND;
     }
    return toAND;
   case '|':
-   if (buf[pos] == '|')
+   if (buf[pos] == '|' ) // (RO) || operator
     {
      pos += 1;
      return toOR;
     }
-   else if (buf[pos] == '=')
+   else if (buf[pos] == '=') // (RO) |= operator
     {
      pos += 1;
      return toSETOR;
@@ -1676,7 +1848,7 @@ t_operator calculator::scan (bool operand, bool percent)
   case '^':
    if (scfg & PAS)
     {
-     if (buf[pos] == '=')
+     if (buf[pos] == '=') // (RO) ^= operator
       {
        pos += 1;
        return toSETPOW;
@@ -1685,7 +1857,7 @@ t_operator calculator::scan (bool operand, bool percent)
     }
    else
     {
-     if (buf[pos] == '=')
+     if (buf[pos] == '=') // (RO) ^= operator
       {
        pos += 1;
        return toSETXOR;
@@ -1693,7 +1865,7 @@ t_operator calculator::scan (bool operand, bool percent)
      return toXOR;
     }
   case '#':
-   if (operand)
+   if (operand) // (RO) # gauge simbol
     {
      float__t fval;
      char *fpos;
@@ -1715,7 +1887,7 @@ t_operator calculator::scan (bool operand, bool percent)
     }
    else
     {
-     if (buf[pos] == '=')
+     if (buf[pos] == '=') // (RO) #= operator
       {
        pos += 1;
        return toSETXOR;
@@ -1724,6 +1896,78 @@ t_operator calculator::scan (bool operand, bool percent)
     }
   case ',':
    return toCOMMA;
+  case '{':
+   {
+    //User function definition syntax: {frq(L, C)1/(2 pi sqrt(L C))}
+	//1. Find the expression in {}
+	//2. Find the function name in it before (..) -> frq
+	//3. Place the name (frq) in the list of names (symbols), and replace the function 
+    //   pointer with a string with parameters and body (L, C)1/(2 pi sqrt(L C)). 
+    //   If such a name already exists, but not for user defined function, return toERROR.
+    //   If such a name already exists for user defined function, return the existing one.
+    //   its done in addUF function, which is called from here. addUF returns nullptr if there is a
+    //   name conflict, and the new symbol if added successfully or already exists as a user
+    //   function.
+    //4. Place the new type tsUFUNC in the list of names (by addUF function)
+	//5. Return the new type toCONTINUE to continue scanning the expression.     
+    char sbuf[STRBUF];
+    int sidx = 0;
+    char *ipos = buf + pos;
+    while (*ipos && (*ipos != '}') && (sidx < STRBUF - 1)) sbuf[sidx++] = *ipos++;
+    sbuf[sidx] = '\0';
+    if (*ipos == '}')
+     {
+      // extract user function name here and put it as symbol in the hash table
+      char fname[STRBUF];
+      char *fnp;
+      fnp = fname;
+      int spos = 0;
+      while (isalnum (sbuf[spos] & 0x7f) || sbuf[spos] == '_')
+       {
+        *fnp++ = sbuf[spos++] & 0x7f;
+       }
+      if (fnp == fname)
+       {
+        error ("Bad character");
+        return toERROR;
+       }
+      *fnp = '\0';
+      
+      if (fname[0])
+       {
+        // Add user function to symbol table 
+        if (!addUF(fname, &sbuf[spos]))
+         {
+          error ("Duplicate name");
+          return toERROR;
+         }
+       }
+      else
+       {
+        error ("User function name missing");
+        return toERROR;
+       }
+     }
+    else
+     {
+      error ("unmatched brace");
+      return toERROR;
+     }
+    pos = ipos - buf + 1;
+#ifdef _UF_AS_OPERAND_
+    // if used this way, expression in {} is treated as a 0 and {expr};expr syntax is supported for
+    // user functions
+    v_stack[v_sp].tag   = tvINT;
+    v_stack[v_sp].ival  = 0;
+    v_stack[v_sp].pos   = pos;
+    v_stack[v_sp++].var = nullptr;
+    return toOPERAND;
+#else //_UF_AS_OPERAND_
+    // if used this way, expression in {} is treated as a empty and {expr}expr syntax is supported
+    // for user functions  
+    return toCONTINUE;
+#endif //_UF_AS_OPERAND_
+   }
   case '\'':
    {
     int_t ival;
@@ -1749,7 +1993,7 @@ t_operator calculator::scan (bool operand, bool percent)
        {
 #ifdef _WCHAR_
 #ifdef _WIN_
-        if (*(ipos + 1) == 'W')
+        if (*(ipos + 1) == 'W') // (RO) wide char constant
          {
           wchar_t wbuf[2];
           char cbuf[2];
@@ -1790,7 +2034,7 @@ t_operator calculator::scan (bool operand, bool percent)
           if (sbuf[0]) scfg |= STR;
           v_stack[v_sp].tag  = tvSTR;
           v_stack[v_sp].ival = 0;
-          v_stack[v_sp].sval = (char *)malloc (STRBUF);
+          v_stack[v_sp].sval = (char *)malloc (sidx+1);
           if (v_stack[v_sp].sval)
            {
             strcpy (v_stack[v_sp].sval, sbuf);
@@ -1883,7 +2127,7 @@ t_operator calculator::scan (bool operand, bool percent)
       if (sbuf[0]) scfg |= STR;
       v_stack[v_sp].tag  = tvSTR;
       v_stack[v_sp].ival = 0;
-      v_stack[v_sp].sval = (char *)malloc (STRBUF);
+      v_stack[v_sp].sval = (char *)malloc (sidx+1);
       if (v_stack[v_sp].sval)
        {
         strcpy (v_stack[v_sp].sval, sbuf);
@@ -2166,7 +2410,9 @@ static int rpr[toTERMINALS] = {
  15                           // COMMA
 };
 
-bool calculator::assign ()
+// Perform assignment operation for the top value on the stack, checking for variable and constant
+// rules. Used for operators like '++', '--', '+=', '-=', etc. that assign to a variable.
+bool calculator::set_op () 
 {
  value &v = v_stack[v_sp - 1];
  if (v.var == nullptr)
@@ -2186,9 +2432,10 @@ bool calculator::assign ()
   }
 }
 
+// Clear the value stack by resetting all entries to default values and 
+// setting the stack pointer to 0
 void calculator::clear_v_stack ()
 {
- // Clear stack before using
  for (int i = 0; i < max_stack_size; ++i)
   {
    v_stack[i].tag   = tvINT;
@@ -2215,28 +2462,29 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
  #ifdef __BORLANDC__
  const float__t qnan = 0.0/0.0;
  #else
- constexpr float__t qnan = std::numeric_limits<float__t>::quiet_NaN ();
+ 
  #endif
  t_operator saved_oper   = toBEGIN;
  value saved_val;
  bool has_saved_val = false;
 
- expr   = (expression && expression[0]);
- buf    = expression;
- v_sp   = 0;
- o_sp   = 0;
- pos    = 0;
- err[0] = '\0';
- result_fval  = qnan;
- result_imval = 0.0;
- result_ival = 0;   
- clear_v_stack ();
+ expr   = (expression && expression[0]); 
+ buf    = expression; // Set the input buffer to the provided expression
+ v_sp   = 0;// Clear the value stack pointer
+ o_sp   = 0; // Clear the operator stack pointer
+ pos    = 0; // Reset the input buffer position
+ err[0] = '\0'; // Clear the error buffer
+ result_fval  = qnan; // Clear the floating-point result
+ result_imval = 0.0; // Clear the imaginary result
+ result_ival = 0;   // Clear the integer result
+
+ clear_v_stack (); // Clear the value stack before evaluation
 
  if (!expr) return qnan;
 
  o_stack[o_sp++] = toBEGIN;
 
- memset (sres, 0, STRBUF);
+ memset (sres, 0, STRBUF); // Clear the string result buffer
  while (true)
   {
   next_token:
@@ -2254,13 +2502,18 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
     }
    else
     {
-     oper = scan (operand, percent);
+     do
+      {
+       oper = scan (operand, percent);
+      }
+     while (oper == toCONTINUE); // Skip semicolons
     }
    if (oper == toERROR)
     {
      result_fval = qnan;
      return qnan;
     }
+   //if (oper == toCONTINUE) goto next_token;
   loper:
    switch (oper)
     {
@@ -2332,7 +2585,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
       }
     }
    n_args = 1;
-   while (o_sp && (lpr[o_stack[o_sp - 1]] >= rpr[oper]))
+   while (o_sp && (lpr[o_stack[o_sp - 1]] >= rpr[oper])) 
     {
      t_operator cop = o_stack[--o_sp];
      if ((UNARY (cop) && (v_sp < 1)) || (BINARY (cop) && (v_sp < 2)))
@@ -2393,7 +2646,13 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            v_stack[0].imval = 0.0;
            v_stack[0].fval  = 0.0;
            v_stack[0].ival  = 0;
-           v_stack[0].tag   = tvINT;
+           v_stack[0].tag   = tvERR;
+#ifdef _STR_VAR_FREE_
+           dupstrvars ();      // Duplicate string variables to ensure that the result string is not
+                               // freed when clearing the strings created during evaluation
+           clearAllStrings (); // Free string variables that were created during evaluation to prevent
+                               // memory leaks
+#endif //_STR_VAR_FREE_
            return result_fval;
           }
         }
@@ -2417,14 +2676,29 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toSEMI: // ;
        // For sub-expressions separated by ';', return the value of the last one
-       v_stack[v_sp - 2] = v_stack[v_sp - 1];
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
+       v_stack[v_sp - 2]       = v_stack[v_sp - 1];
        v_stack[v_sp - 1].var   = nullptr;
        v_stack[v_sp - 1].sval  = nullptr;
        v_sp -= 1;
        break;
+       
+      case toCONTINUE: //{}
+       continue;
 
       case toADD:    // +
       case toSETADD: // +=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvINT) && (v_stack[v_sp - 2].tag == tvINT))
         {
          v_stack[v_sp - 2].ival += v_stack[v_sp - 1].ival;
@@ -2436,7 +2710,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
           {
            error (v_stack[v_sp - 2].pos, "Resulting string is too long");
            result_fval = qnan;
-           clear_v_stack ();
            return qnan;
           }
           {
@@ -2490,7 +2763,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETADD)
         {
-         if (!assign ())
+         if (!set_op ())
           {
            result_fval = qnan;
            return qnan;
@@ -2501,6 +2774,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toSUB:    // -
       case toSETSUB: // -=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
         {
          error (v_stack[v_sp - 2].pos, "Illegal string operation");
@@ -2542,7 +2821,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETSUB)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -2553,6 +2832,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toMUL:    // *
       case toSETMUL: // *=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvINT) && (v_stack[v_sp - 2].tag == tvINT))
         {
          v_stack[v_sp - 2].ival *= v_stack[v_sp - 1].ival;
@@ -2596,7 +2881,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETMUL)
         {
-         if (!assign ())
+         if (!set_op ())
           {
            result_fval = qnan;
            return qnan;
@@ -2607,6 +2892,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toDIV:    // /
       case toSETDIV: // /=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
         {
          error (v_stack[v_sp - 2].pos, "Illegal string operation");
@@ -2662,7 +2953,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETDIV)
         {
-         if (!assign ())
+         if (!set_op ())
           {
            result_fval = qnan;
            return qnan;
@@ -2672,6 +2963,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toPAR: // // parallel resistors
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
         {
          error (v_stack[v_sp - 2].pos, "Illegal string operation");
@@ -2744,7 +3041,13 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_stack[v_sp - 1].var = nullptr;
        break;
 
-      case toPERCENT:
+      case toPERCENT: // %
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -2784,6 +3087,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toMOD:    // %
       case toSETMOD: // %=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -2822,7 +3131,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETMOD)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -2833,6 +3142,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toPOW:    // ** ^
       case toSETPOW: // **= ^=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
         {
          error (v_stack[v_sp - 2].pos, "Illegal string operation");
@@ -2882,7 +3197,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETPOW)
         {
-         if (!assign ())
+         if (!set_op ())
           {
            result_fval = qnan;
            return qnan;
@@ -2893,6 +3208,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toAND:    // &
       case toSETAND: // &=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -2917,7 +3238,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETAND)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -2928,6 +3249,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toOR:    // |
       case toSETOR: // |=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -2952,7 +3279,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETOR)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -2963,6 +3290,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toXOR:    // ^
       case toSETXOR: // ^=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -2987,7 +3320,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETXOR)
         {
-         if (!assign ())
+         if (!set_op ())
           {
            result_fval = qnan;
            return qnan;
@@ -2998,6 +3331,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toASL:    // <<
       case toSETASL: // <<=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3022,7 +3361,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETASL)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -3033,6 +3372,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toASR:    // >>
       case toSETASR: // >>=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3057,7 +3402,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETASR)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -3068,6 +3413,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
       case toLSR:    // >>> (logical shift right)
       case toSETLSR: // >>>=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3092,7 +3443,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_sp -= 1;
        if (cop == toSETLSR)
         {
-         if (!assign ()) 
+         if (!set_op ()) 
           {
            result_fval = qnan;
            return qnan;
@@ -3102,6 +3453,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toEQ: // ==
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvINT && v_stack[v_sp - 2].tag == tvINT)
         {
          v_stack[v_sp - 2].ival = v_stack[v_sp - 2].ival == v_stack[v_sp - 1].ival;
@@ -3122,6 +3479,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toNE: // !=, <>
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvINT && v_stack[v_sp - 2].tag == tvINT)
         {
          v_stack[v_sp - 2].ival = v_stack[v_sp - 2].ival != v_stack[v_sp - 1].ival;
@@ -3142,6 +3505,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toGT: // >
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3167,6 +3536,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toGE: // >=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3192,6 +3567,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toLT: // <
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3217,6 +3598,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toLE: // <=
+       if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 2].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvCOMPLEX) || (v_stack[v_sp - 2].tag == tvCOMPLEX))
         {
          error (v_stack[v_sp - 2].pos, "Illegal complex operation");
@@ -3242,6 +3629,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toPREINC: //++v
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3262,7 +3655,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 1].fval += 1;
         }
-       if (!assign ())
+       if (!set_op ())
         {
          result_fval = qnan;
          return qnan;
@@ -3271,6 +3664,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toPREDEC: // --v
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3291,7 +3690,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
         {
          v_stack[v_sp - 1].fval -= 1;
         }
-       if (!assign ()) 
+       if (!set_op ()) 
         {
          result_fval = qnan;
          return qnan;
@@ -3300,6 +3699,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toPOSTINC: // v++
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3330,6 +3735,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toPOSTDEC: // v--
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3360,6 +3771,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toFACT: // n!
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3415,6 +3832,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toNOT: // !
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvCOMPLEX)
         {
          error (v_stack[v_sp - 1].pos, "Illegal complex operation");
@@ -3440,6 +3863,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toMINUS: // -v
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR))
         {
          error (v_stack[v_sp - 1].pos, "Illegal string operation");
@@ -3454,6 +3883,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        }
 
       case toPLUS: //+v
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if ((v_stack[v_sp - 1].tag == tvSTR))
         {
          error (v_stack[v_sp - 1].pos, "Illegal string operation");
@@ -3465,6 +3900,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        break;
 
       case toCOM: // ~
+       if (((v_stack[v_sp - 1].tag == tvERR)))
+        {
+         error (v_stack[v_sp - 1].pos, "Undefined operand");
+         result_fval = qnan;
+         return qnan;
+        }
        if (v_stack[v_sp - 1].tag == tvSTR)
         {
          error (v_stack[v_sp - 1].pos, "Illegal string operation");
@@ -3520,6 +3961,19 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              ((void (*) (value *, value *, int))sym->func) (&v_stack[v_sp - 2], &v_stack[v_sp - 1],
                                                             sym->fidx);
              v_sp -= 1;
@@ -3532,15 +3986,40 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 2].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
+              {
+               error (v_stack[v_sp - 2].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              ((void (*) (value *, value *, value *, int))sym->func) (
                  &v_stack[v_sp - 3], &v_stack[v_sp - 2], &v_stack[v_sp - 1], sym->fidx);
              v_sp -= 2;
              break;
 
-            case tsIFUNCF1: // int f(float x)
+            case tsIFUNCF1: // int f(float x) (wrgb() function)
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
                result_fval = qnan;
                return qnan;
               }
@@ -3549,10 +4028,22 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 1;
              break;
 
-            case tsSFUNCF1: // char* f(float x)
+            case tsSFUNCF1: // str f(float x) (winf())
              if (n_args != 1)
               {
                error (v_stack[v_sp - 2].pos, "Function should take one argument");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
                result_fval = qnan;
                return qnan;
               }
@@ -3570,10 +4061,22 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 1;
              break;
 
-            case tsIFUNC1: // int f(int x)
+            case tsIFUNC1: // int f(int x) (int() function)
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
                result_fval = qnan;
                return qnan;
               }
@@ -3583,10 +4086,22 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 1;
              break;
 
-            case tsIFUNC2: // int f(int x, int y)
+            case tsIFUNC2: // int f(int x, int y) (invmod() function)
              if (n_args != 2)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take two arguments");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 2].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
+              {
+               error (v_stack[v_sp - 2].pos, "Illegal string operation");
                result_fval = qnan;
                return qnan;
               }
@@ -3596,13 +4111,30 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 2;
              break;
 
-            case tsIFFUNC3: // f(double, double, int)
+            case tsIFFUNC3: // int f(double, double, int)
+                            // looks like never used, but keep it for compatibility with old
+                            // versions
              if (n_args != 3)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take three arguments");
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)
+                  || (v_stack[v_sp - 3].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 3].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR)
+                 || (v_stack[v_sp - 3].tag == tvSTR))
+              {
+               error (v_stack[v_sp - 3].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              v_stack[v_sp - 4].ival = (*(int_t (*) (double, double, int_t))sym->func) (
                  v_stack[v_sp - 3].get_dbl (), v_stack[v_sp - 2].get_dbl (),
                  v_stack[v_sp - 1].get_int ());
@@ -3610,36 +4142,76 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 3;
              break;
 
-            case tsFFUNC1: // float f(float x)
+            case tsFFUNC1: // float f(float x) (sin(x) function)
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              v_stack[v_sp - 2].fval
                  = (*(float__t (*) (float__t))sym->func) (v_stack[v_sp - 1].get ());
              v_stack[v_sp - 2].tag = tvFLOAT;
              v_sp -= 1;
              break;
 
-            case tsFFUNC2: // float f(float x, float y)
+            case tsFFUNC2: // float f(float x, float y) (atan2(), pow() functions)
              if (n_args != 2)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take two arguments");
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 2].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR))
+              {
+               error (v_stack[v_sp - 2].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              v_stack[v_sp - 3].fval = (*(float__t (*) (float__t, float__t))sym->func) (
                  v_stack[v_sp - 2].get (), v_stack[v_sp - 1].get ());
              v_stack[v_sp - 3].tag = tvFLOAT;
              v_sp -= 2;
              break;
 
-            case tsFFUNC3: // float f(float x, float y, float z)
+            case tsFFUNC3: // float f(float x, float y, float z) (vout() function)
              if (n_args != 3)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take three arguments");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)
+                  || (v_stack[v_sp - 3].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 3].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR)
+                 || (v_stack[v_sp - 3].tag == tvSTR))
+              {
+               error (v_stack[v_sp - 3].pos, "Illegal string operation");
                result_fval = qnan;
                return qnan;
               }
@@ -3652,7 +4224,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 3;
              break;
 
-            case tsPFUNCn: // f(str, ...)
+            case tsPFUNCn: // f(str, ...) ( prn(...) function)
              if (n_args < 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one or more arguments");
@@ -3680,10 +4252,34 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= n_args;
              break;
 
-            case tsSFUNCF2: // f(str, x)
+            case tsSFUNCF2: // float f(str, x) (const())
              if (n_args != 2)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take two arguments");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 2].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 2].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 2].tag != tvSTR)
+              {
+               error (v_stack[v_sp - 2].pos, "String operand required");
                result_fval = qnan;
                return qnan;
               }
@@ -3695,10 +4291,16 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 2;
              break;
 
-            case tsSIFUNC1: // int f(char *str)
+            case tsSIFUNC1: // int f(char *str) (datatime() function)
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag != tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "String operand required");
                result_fval = qnan;
                return qnan;
               }
@@ -3707,13 +4309,28 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_stack[v_sp - 2].tag = tvINT;
              v_sp -= 1;
              break;
-            case tsCFUNCC1: // f(x + iy)
+            case tsCFUNCC1: // complex f(x + iy)
+                            // looks like never used, but keep it for compatibility with old
+                            // versions
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              {
               long double re = v_stack[v_sp - 1].fval;
               long double im = v_stack[v_sp - 1].imval;
@@ -3727,28 +4344,178 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              break;
 
             case tsFFUNCC1: // float f(x + iy)
+                            // looks like never used, but keep it for compatibility with old
+                            // versions
              if (n_args != 1)
               {
                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
                result_fval = qnan;
                return qnan;
               }
+             if (((v_stack[v_sp - 1].tag == tvERR)))
+              {
+               error (v_stack[v_sp - 1].pos, "Undefined operand");
+               result_fval = qnan;
+               return qnan;
+              }
+             if (v_stack[v_sp - 1].tag == tvSTR)
+              {
+               error (v_stack[v_sp - 1].pos, "Illegal string operation");
+               result_fval = qnan;
+               return qnan;
+              }
+
              v_stack[v_sp - 2].fval = (*(float__t (*) (float__t, float__t))sym->func) (
                  v_stack[v_sp - 1].fval, v_stack[v_sp - 1].imval);
              v_stack[v_sp - 2].tag = tvFLOAT;
              v_sp -= 1;
              break;
 
+            case tsUFUNCT: // user defined function
+              { 
+                //   sym->name -> frq
+                //   (char *)sym->func -> (L, C)1/(2 pi sqrt(L C))
+                //1. When tsUFUNC is found, create a new instance of the calculator class.
+		        //2. Sequentially parse the previously stored string in the name, selecting
+		        //   the names separated by ',' and calling addvar(name, value) for the new 
+                //   calculator, popping value from the stack. And checking that the number 
+                //   of declared parameters matches the number of passed ones.
+		        //3. Call the evaluate method on the new calculator with the remainder after 
+                //   the string parameters equal to 1/(2 pi sqrt(L C))
+		        //4. Push the result onto the stack.
+		        //5. Delete the previously created calculator.
+
+                calculator *pCalculator = new calculator (scfg, hash_table);
+                if (!pCalculator)
+                 {
+                  error ("Out of memory");
+                  result_fval = qnan;
+                  return qnan;
+                 }
+
+                const char *funcdef = (const char *)sym->func;
+                const char *p = strchr (funcdef, '(');
+                if (!p)
+                 {
+                  error ("No '(' in function definition");
+                  delete pCalculator;
+                  result_fval = qnan;
+                  return qnan;
+                 }
+                p++; // after '('
+
+                int param_count = 0;
+                int arg_idx     = 0;
+                char vbuf[16]; // buffer for variable name, max 15 characters + null terminator
+                while (*p && *p != ')')
+                 {
+                  // Skip spaces
+                  while (*p && isspace (*p)) p++;
+                  // Read variable name
+                  int vi = 0;
+                  while (*p && (isalnum (*p & 0x7f) || *p == '_'))
+                   {
+                    if (vi < (int)sizeof (vbuf) - 1) vbuf[vi++] = *p;
+                    p++;
+                   }
+                  vbuf[vi] = 0;
+                  if (vi == 0)
+                   {
+                    error ("Empty parameter name");
+                    delete pCalculator;
+                    result_fval = qnan;
+                    return qnan;
+                   }
+                  // Add variable
+                  if (arg_idx >= n_args)
+                   {
+                    error ("Too many parameters in function definition");
+                    delete pCalculator;
+                    result_fval = qnan;
+                    return qnan;
+                   }
+                  if (((v_stack[v_sp - n_args + arg_idx].tag == tvERR)))
+                   {
+                    error (v_stack[v_sp - n_args + arg_idx].pos, "Undefined operand");
+                    delete pCalculator;
+                    result_fval = qnan;
+                    return qnan;
+                   }
+                  pCalculator->addvar (vbuf, v_stack[v_sp - n_args + arg_idx]);
+                  arg_idx++;
+
+                  // Skip spaces
+                  while (*p && isspace (*p)) p++;
+                  if (*p == ',')
+                   {
+                    p++;
+                    continue;
+                   }
+                  else if (*p == ')')
+                   {
+                    break;
+                   }
+                  else
+                   {
+                    error ("Invalid character in parameter list");
+                    delete pCalculator;
+                    result_fval = qnan;
+                    return qnan;
+                   }
+                 }
+                if (*p != ')')
+                 {
+                  error ("No closing ')' in function definition");
+                  delete pCalculator;
+                  result_fval = qnan;
+                  return qnan;
+                 }
+                p++; // after ')'
+
+                if (arg_idx != n_args)
+                 {
+                  errorf (v_stack[v_sp - n_args - 1].pos, "Function should take %d argument(s)",
+                          arg_idx);
+                  delete pCalculator;
+                  result_fval = qnan;
+                  return qnan;
+                 }
+
+                // Rest of the string — expression
+                while (*p && isspace (*p)) p++;
+                float__t res = pCalculator->evaluate ((char *)p);
+
+               if (IsNaN (res))
+                 {
+                  errorf (v_stack[v_sp - n_args - 1].pos, "%s", pCalculator->error());
+                  delete pCalculator;
+                  result_fval = qnan;
+                  return qnan;
+                 }
+
+                v_stack[v_sp - n_args - 1].fval = pCalculator->get_re_res() ;
+                v_stack[v_sp - n_args - 1].imval = pCalculator->get_im_res ();
+                v_stack[v_sp - n_args - 1].ival  = pCalculator->get_int_res ();
+                v_stack[v_sp - n_args - 1].tag   = tvFLOAT;
+                if (v_stack[v_sp - n_args - 1].imval != 0.0)
+                 v_stack[v_sp - n_args - 1].tag = tvCOMPLEX;
+                else if ((float__t)v_stack[v_sp - n_args - 1].ival
+                         == v_stack[v_sp - n_args - 1].fval)
+                 v_stack[v_sp - n_args - 1].tag = tvINT;
+
+                if (pCalculator->get_res_tag() == tvSTR)
+                 {
+                  v_stack[v_sp - n_args - 1].sval = dupString (pCalculator->get_str_res());
+                  v_stack[v_sp - n_args - 1].tag  = tvSTR;
+                  scfg |= STR;
+                 }
+
+                delete pCalculator;
+                v_sp -= n_args; // pop arguments
+             }
+             break;
             default:
              error ("Invalid expression");
-            }
-          }
-         if (cop == toSETADD)
-          {
-           if (!assign ())
-            {
-             result_fval = qnan;
-             return qnan;
             }
           }
          o_sp -= 1;
