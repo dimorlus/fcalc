@@ -58,6 +58,10 @@
 #define _ENABLE_PREIMAGINARY_
 #define _STR_VAR_FREE_ 
 
+// Macros to determine if an operator is binary or unary based on its position in the enumeration
+#define BINARY(opd) (opd >= toPOW)
+#define UNARY(opd)  ((opd >= toPOSTINC) && (opd <= toCOM))
+
 
 float__t Const (void *clc, char *name, float__t x)
 {
@@ -69,8 +73,9 @@ float__t Var (void *clc, char *name, float__t x)
  return ((calculator *)clc)->AddVar (name, x);
 }
 
-calculator::calculator (int cfg, symbol **symtab, int copyMask)
+calculator::calculator (int cfg, symbol **symtab, int copyMask, int deep)
 {
+ this->deep  = deep + 1; // Set the current stack depth (incremented by 1 to account for the new instance)
  v_sp         = 0;    // Clear the value stack pointer
  o_sp         = 0;    // Clear the operator stack pointer
  result_fval  = qnan; // Clear the floating-point result
@@ -111,7 +116,8 @@ calculator::calculator (int cfg, symbol **symtab, int copyMask)
       {
        // Check the mask: tsUFUNCT is always skipped to avoid recursion
        // Other tags are checked against the copyMask
-       if (src->tag != tsUFUNCT && (copyMask & (1 << src->tag)))
+       // if (src->tag != tsUFUNCT && (copyMask & (1 << src->tag)))
+       if ((copyMask & (1 << src->tag)))
         {
          symbol *ns = new symbol;
          *ns        = *src;  // Copy all fields (tag, fidx, func, val)
@@ -123,8 +129,10 @@ calculator::calculator (int cfg, symbol **symtab, int copyMask)
          if ((src->tag == tsVARIABLE) && (src->val.tag == tvSTR) && src->val.sval)
           ns->val.sval = strdup (src->val.sval);
 
-         // func for tsUFUNCT is not copied (see condition above),
+                  // func for tsUFUNCT is not copied (see condition above),
          // for other func — pointer to static function, copy as is
+         if (src->tag == tsUFUNCT) 
+             ns->func = strdup((char *)src->func);
 
          ns->next = nullptr;
          *dst     = ns;
@@ -520,6 +528,7 @@ void calculator::clearAllStrings () // Free all registered strings in the string
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
+// Print the result of the calculation into the provided string buffer with formatting options
 int calculator::print (char *str, int Options, int binwide, int *size)
 {
  int n     = 0;
@@ -2370,6 +2379,8 @@ t_operator calculator::scan (bool operand, bool percent)
   }
 }
 
+// Left precedence for operators, used to determine when to push operators onto the stack during
+// expression evaluation. Higher values indicate higher precedence.
 static int lpr[toTERMINALS] = {
  2,  0,  0,  0,              // BEGIN, OPERAND, ERROR, END,
  4,  4,                      // LPAR, RPAR
@@ -2390,6 +2401,8 @@ static int lpr[toTERMINALS] = {
  10                          // COMMA
 };
 
+// Right precedence for operators, used to determine when to pop operators from the stack during
+// expression evaluation. Higher values indicate higher precedence.
 static int rpr[toTERMINALS] = {
  0,   0,  0,  1,              // BEGIN, OPERAND, ERROR, END,
  110, 3,                      // LPAR, RPAR
@@ -2449,9 +2462,12 @@ void calculator::clear_v_stack ()
  v_sp = 0;
 }
 
+// Evaluate the given expression and return the result as a floating-point value. The expression is
+// parsed and evaluated according to the rules defined in the calculator class,
+// using operator precedence
 float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimval)
 {
- char var_name[16];
+ char var_name[MAXOP]; // maximum length of operator or function name
  bool operand            = true;
  bool percent            = false;
  int n_args              = 0;
@@ -2464,6 +2480,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
  #else
  
  #endif
+
  t_operator saved_oper   = toBEGIN;
  value saved_val;
  bool has_saved_val = false;
@@ -2477,6 +2494,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
  result_fval  = qnan; // Clear the floating-point result
  result_imval = 0.0; // Clear the imaginary result
  result_ival = 0;   // Clear the integer result
+
+ if (deep > MAXSTK)
+  {
+   error (pos, "Too deep recursion");
+   return qnan;
+  }
 
  clear_v_stack (); // Clear the value stack before evaluation
 
@@ -4111,37 +4134,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 2;
              break;
 
-            case tsIFFUNC3: // int f(double, double, int)
-                            // looks like never used, but keep it for compatibility with old
-                            // versions
-             if (n_args != 3)
-              {
-               error (v_stack[v_sp - n_args - 1].pos, "Function should take three arguments");
-               result_fval = qnan;
-               return qnan;
-              }
-             if (((v_stack[v_sp - 1].tag == tvERR) || (v_stack[v_sp - 2].tag == tvERR)
-                  || (v_stack[v_sp - 3].tag == tvERR)))
-              {
-               error (v_stack[v_sp - 3].pos, "Undefined operand");
-               result_fval = qnan;
-               return qnan;
-              }
-             if ((v_stack[v_sp - 1].tag == tvSTR) || (v_stack[v_sp - 2].tag == tvSTR)
-                 || (v_stack[v_sp - 3].tag == tvSTR))
-              {
-               error (v_stack[v_sp - 3].pos, "Illegal string operation");
-               result_fval = qnan;
-               return qnan;
-              }
-
-             v_stack[v_sp - 4].ival = (*(int_t (*) (double, double, int_t))sym->func) (
-                 v_stack[v_sp - 3].get_dbl (), v_stack[v_sp - 2].get_dbl (),
-                 v_stack[v_sp - 1].get_int ());
-             v_stack[v_sp - 4].tag = tvINT;
-             v_sp -= 3;
-             break;
-
             case tsFFUNC1: // float f(float x) (sin(x) function)
              if (n_args != 1)
               {
@@ -4309,67 +4301,6 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_stack[v_sp - 2].tag = tvINT;
              v_sp -= 1;
              break;
-            case tsCFUNCC1: // complex f(x + iy)
-                            // looks like never used, but keep it for compatibility with old
-                            // versions
-             if (n_args != 1)
-              {
-               error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
-               result_fval = qnan;
-               return qnan;
-              }
-             if (((v_stack[v_sp - 1].tag == tvERR)))
-              {
-               error (v_stack[v_sp - 1].pos, "Undefined operand");
-               result_fval = qnan;
-               return qnan;
-              }
-             if (v_stack[v_sp - 1].tag == tvSTR)
-              {
-               error (v_stack[v_sp - 1].pos, "Illegal string operation");
-               result_fval = qnan;
-               return qnan;
-              }
-
-             {
-              long double re = v_stack[v_sp - 1].fval;
-              long double im = v_stack[v_sp - 1].imval;
-              long double out_re, out_im;
-              ((complex_func_t)sym->func) (re, im, out_re, out_im);
-              v_stack[v_sp - 2].fval  = out_re;
-              v_stack[v_sp - 2].imval = out_im;
-              v_stack[v_sp - 2].tag   = tvCOMPLEX;
-             }
-             v_sp -= 1;
-             break;
-
-            case tsFFUNCC1: // float f(x + iy)
-                            // looks like never used, but keep it for compatibility with old
-                            // versions
-             if (n_args != 1)
-              {
-               error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
-               result_fval = qnan;
-               return qnan;
-              }
-             if (((v_stack[v_sp - 1].tag == tvERR)))
-              {
-               error (v_stack[v_sp - 1].pos, "Undefined operand");
-               result_fval = qnan;
-               return qnan;
-              }
-             if (v_stack[v_sp - 1].tag == tvSTR)
-              {
-               error (v_stack[v_sp - 1].pos, "Illegal string operation");
-               result_fval = qnan;
-               return qnan;
-              }
-
-             v_stack[v_sp - 2].fval = (*(float__t (*) (float__t, float__t))sym->func) (
-                 v_stack[v_sp - 1].fval, v_stack[v_sp - 1].imval);
-             v_stack[v_sp - 2].tag = tvFLOAT;
-             v_sp -= 1;
-             break;
 
             case tsUFUNCT: // user defined function
               { 
@@ -4385,7 +4316,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 		        //4. Push the result onto the stack.
 		        //5. Delete the previously created calculator.
 
-                calculator *pCalculator = new calculator (scfg, hash_table);
+                calculator *pCalculator = new calculator (scfg, hash_table, MASK_DEFAULT, deep);
                 if (!pCalculator)
                  {
                   error ("Out of memory");
@@ -4406,7 +4337,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
                 int param_count = 0;
                 int arg_idx     = 0;
-                char vbuf[16]; // buffer for variable name, max 15 characters + null terminator
+                char vbuf[MAXOP]; // buffer for variable name, max 15 characters + null terminator
                 while (*p && *p != ')')
                  {
                   // Skip spaces
@@ -4493,7 +4424,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                   return qnan;
                  }
 
-                v_stack[v_sp - n_args - 1].fval = pCalculator->get_re_res() ;
+                v_stack[v_sp - n_args - 1].fval  = pCalculator->get_re_res () ;
                 v_stack[v_sp - n_args - 1].imval = pCalculator->get_im_res ();
                 v_stack[v_sp - n_args - 1].ival  = pCalculator->get_int_res ();
                 v_stack[v_sp - n_args - 1].tag   = tvFLOAT;

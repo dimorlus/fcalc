@@ -52,10 +52,11 @@
 #define FRH  (1 << 26) // (UI) Farenheit input/output
 #define TOP  (1 << 27) // (UI) Always on top
 #define IMUL (1 << 28) // (WO) Implicit multiplication
-#define OPT  (1 << 29) // (UI) Print options
-#define NIV  (1 << 31) // (UI) Not add functions and variables to the hash table (internal use only) 
+#define OPT  (1 << 29) // (UI) Print options (CLI only)
 
 #define STRBUF 256 // bufer size for string operations
+#define MAXOP  16  // maximum length of operator or function name
+#define MAXSTK 5   // maximum stack depth
 
 #ifdef __BORLANDC__
 
@@ -79,10 +80,11 @@ typedef double float__t;
 #endif
 
 #ifdef __BORLANDC__
-const float__t qnan = 0.0/0.0;
+const float__t qnan = 0.0 / 0.0;
 #else
 constexpr float__t qnan = std::numeric_limits<float__t>::quiet_NaN ();
 #endif
+
 
 class value;
 class symbol;
@@ -122,11 +124,12 @@ typedef union
   int frh : 1;
   int top : 1;
   int imul : 1;
+  int opt : 1;
  };
 } toptions;
 #pragma pack(pop)
 
-enum t_value
+enum t_value // t_value represents the type of a value in the calculator
 {
  tvERR,
  tvINT,
@@ -137,7 +140,7 @@ enum t_value
  tvUFUNCT
 };
 
-enum t_operator
+enum t_operator // t_operator represents the type of an operator in the calculator
 {
  toBEGIN,   // toBEGIN must be the first operator in the list
  toOPERAND, // toOPERAND represents an operand in the expression
@@ -195,11 +198,7 @@ enum t_operator
              // operators
 };
 
-// Macros to determine if an operator is binary or unary based on its position in the enumeration
-#define BINARY(opd) (opd >= toPOW)
-#define UNARY(opd)  ((opd >= toPOSTINC) && (opd <= toCOM))
-
-enum t_symbol
+enum t_symbol // t_symbol represents the type of a symbol in the calculator
 {
  tsVARIABLE, // tsVARIABLE represents a variable symbol
  tsCONSTANT, // tsCONSTANT represents a constant symbol
@@ -208,11 +207,8 @@ enum t_symbol
  tsIFUNC1,  // int f(int x)
  tsIFUNC2,  // int f(int x, int y)
  tsFFUNC1,  // float f(float x)
- tsCFUNCC1, // complex f(complex x)
- tsFFUNCC1, // float f(complex x)
  tsFFUNC2,  // float f(float x, float y)
  tsFFUNC3,  // float f(float x, float y, float z)
- tsIFFUNC3, // int f(float x, float y, int z)
  tsPFUNCn,  // int printf(char *format, ...)
  tsSFUNCF2,  // float const(char *name, float value)
  tsSIFUNC1, // int f(char *s)
@@ -231,20 +227,20 @@ enum t_symbol
 #define MASK_IFUNC1 (1<< tsIFUNC1) // tsIFUNC1 represents an int function with one int argument
 #define MASK_IFUNC2 (1<< tsIFUNC2) // tsIFUNC2 represents an int function with two int arguments
 #define MASK_FFUNC1 (1<< tsFFUNC1) // tsFFUNC1 represents a float function with one float argument
-#define MASK_CFUNCC1 (1<< tsCFUNCC1) // tsCFUNCC1 represents a complex function with one complex argument
-#define MASK_FFUNCC1 (1<< tsFFUNCC1) // tsFFUNCC1 represents a float function with one complex argument
 #define MASK_FFUNC2 (1<< tsFFUNC2) // tsFFUNC2 represents a float function with two float arguments
 #define MASK_FFUNC3 (1<< tsFFUNC3) // tsFFUNC3 represents a float function with three float arguments
-#define MASK_IFFUNC3 (1<< tsIFFUNC3) // tsIFFUNC3 represents an int function with two float arguments and one int argument
 #define MASK_PFUNCn (1<< tsPFUNCn) // tsPFUNCn represents a printf function with a variable number of arguments
 #define MASK_SFUNCF2 (1<< tsSFUNCF2) // tsSFUNCF2 represents a float function with two float arguments
 #define MASK_SIFUNC1 (1<< tsSIFUNC1) // tsSIFUNC1 represents an int function with one char* argument
 #define MASK_VFUNC1 (1<< tsVFUNC1) // tsVFUNC1 represents a void function with one value argument and one int argument
 #define MASK_VFUNC2 (1<< tsVFUNC2) // tsVFUNC2 represents a void function with two value arguments and one int argument
 #define MASK_UFUNCT (1<< tsUFUNCT) // tsUFUNCT represents a user-defined function
-#define MASK_DEFAULT (MASK_CONSTANT | MASK_IFUNCF1 | MASK_SFUNCF1 | MASK_IFUNC1 | MASK_IFUNC2 | MASK_FFUNC1 | MASK_CFUNCC1 | MASK_FFUNCC1 | MASK_FFUNC2 | MASK_FFUNC3 | MASK_IFFUNC3 | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 | MASK_VFUNC2)
+#define MASK_DEFAULT (MASK_CONSTANT | MASK_IFUNCF1 | MASK_SFUNCF1 | MASK_IFUNC1 \
+                    | MASK_IFUNC2 | MASK_FFUNC1  | MASK_FFUNC2 | MASK_FFUNC3  \
+                    | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 \
+                    | MASK_VFUNC2 | MASK_UFUNCT)
 
-enum v_func
+enum v_func // v_func represents the index of a built-in function in the calculator
 {
  vf_abs,
  vf_pol,
@@ -284,7 +280,8 @@ enum v_func
  vf_num
 };
 
-class value
+class value // value represents a value in the calculator, which can be an integer, float, complex
+            // number, string, or user-defined function
 {
  public:
  t_value tag; // Type of value
@@ -308,15 +305,13 @@ class value
  }
 
  inline float__t get () { return tag == tvINT ? (float__t)ival : fval; }
-
  inline float__t get_dbl () { return tag == tvINT ? (double)ival : (double)fval; }
-
  inline int_t get_int () { return tag == tvINT ? ival : (int_t)fval; }
-
  inline char *get_str () { return tag == tvSTR ? sval : nullptr; }
 };
 
-class symbol
+class symbol // symbol represents a symbol in the calculator, which can be a variable, constant, or
+             // function
 {
  public:
  t_symbol tag; // Type of symbol
@@ -341,20 +336,20 @@ const int max_stack_size        = 256;  // Maximum size of value and operator st
 const int max_expression_length = 1024; // Maximum length of expression
 const int hash_table_size = 1013; // Size of hash table for variables and functions
 
-// Function pointer type for complex functions (taking real and imaginary parts as input and output)
-typedef void (*complex_func_t) (long double re, long double im, long double &out_re,
-                                long double &out_im);
-
-struct StringNode
+struct StringNode // StringNode represents a node in a linked list of strings used for memory
+                  // management of allocated strings
 {
  char *str;        // String pointer to the allocated string
  StringNode *next; // Next node in the list
 };
 
-class calculator
+class calculator // calculator represents the main class for the expression calculator, which
+                 // manages the state of the calculator, including variables, functions, stacks, and
+                 // parsing logic
 {
  private:
  int scfg; // Syntax configuration flags
+ int deep; // Current stack depth
  value v_stack[max_stack_size]; // Value stack for operands
  symbol *hash_table[hash_table_size]; // Hash table for variables and functions
  t_operator o_stack[max_stack_size]; // Operator stack
@@ -392,16 +387,13 @@ class calculator
                   bool percent); // Scan the next token in the expression and return its operator type
  void error (int pos, const char *msg); // Report an error at the given position with the specified message
  void errorf (int pos, const char *fmt, ...); // Report an error at the given position with a formatted message
- inline void error (const char *msg)
- {
-  error (pos - 1, msg);
- } // Report an error at the current position with the specified message
+ inline void error (const char *msg) { error (pos - 1, msg); } // Report an error at the current position with 
+                                                               //the specified message
  bool set_op (); // Assign a value to a variable
 
  bool isCMP (char *&fpos); // Check if the current position is a computing format
- int hscanf (char *str, int_t &ival,
-             int &nn); // Scan a hexadecimal number from the string and store it in ival, with nn
-                       // being the number of characters processed
+ int hscanf (char *str, int_t &ival,  int &nn); // Scan a hexadecimal number from the string and store it in ival,
+                                               // with nn being the number of characters processed
  int bscanf (char *str, int_t &ival, int &nn); // Scan a binary number from the string and store it in ival, 
                                                //with nn being the number of characters processed
  int oscanf (char *str, int_t &ival, int &nn); // Scan an octal number from the string and store it in ival, 
@@ -419,7 +411,8 @@ class calculator
  public:
  calculator (int cfg = PAS + SCI + UPCASE,
              symbol **symtab = nullptr,
-             int mask=MASK_DEFAULT); // Constructor with optional syntax configuration
+             int mask=MASK_DEFAULT,
+             int deep = 0); // Constructor with optional syntax configuration
  inline void syntax (int cfg = PAS + SCI + UPCASE + FFLOAT)  { scfg = cfg; } // Set syntax configuration
  inline int issyntax (void) { return scfg; } // Get current syntax configuration
  inline char *error (void) { return err; }   // Get error message
