@@ -55,8 +55,8 @@
 #define OPT  (1 << 29) // (UI) Print options (CLI only)
 
 #define STRBUF 256 // bufer size for string operations
-#define MAXOP  16  // maximum length of operator or function name
-#define MAXSTK 5   // maximum stack depth
+#define MAXOP  64  // maximum length of operator or function name
+#define MAXSTK 10  // maximum stack depth
 
 #ifdef __BORLANDC__
 
@@ -137,64 +137,68 @@ enum t_value // t_value represents the type of a value in the calculator
  tvPERCENT,
  tvCOMPLEX,
  tvSTR,
- tvUFUNCT
+ tvUFUNCT,
+ tvSOLVE,
+ tvINTEGR,
+ tvDIFF
 };
 
 enum t_operator // t_operator represents the type of an operator in the calculator
 {
- toBEGIN,   // toBEGIN must be the first operator in the list
- toOPERAND, // toOPERAND represents an operand in the expression
- toERROR,   // toERROR represents an error in the expression
- toEND,     // toEND represents the end of the expression
- toLPAR,    // toLPAR represents a left parenthesis '('
- toRPAR,    // toRPAR represents a right parenthesis ')'
- toFUNC,    // toFUNC represents a function
- toPOSTINC, // toPOSTINC represents a post-increment operator
- toPOSTDEC, // toPOSTDEC represents a post-decrement operator
- toFACT,    // toFACT represents a factorial operator
- toPREINC,  // toPREINC represents a pre-increment operator
- toPREDEC,  // toPREDEC represents a pre-decrement operator
- toPLUS,    // toPLUS represents an addition operator
- toMINUS,   // toMINUS represents a subtraction operator
- toNOT,     // toNOT represents a logical NOT operator
- toCOM,     // toCOM represents a bitwise complement operator
- toPOW,     // toPOW represents a power operator
- toPERCENT, // toPERCENT represents a percentage operator
- toMUL,     // toMUL represents a multiplication operator
- toDIV,     // toDIV represents a division operator
- toMOD,     // toMOD represents a modulo operator
- toPAR,     // toPAR represents a parenthesis operator
- toADD,     // toADD represents an addition operator
- toSUB,     // toSUB represents a subtraction operator
- toASL,     // toASL represents a arithmetic shift left operator
- toASR,     // toASR represents a arithmetic shift right operator
- toLSR,     // toLSR represents a logical shift right operator
- toGT,      // toGT represents a greater than operator
- toGE,      // toGE represents a greater than or equal operator
- toLT,      // toLT represents a less than operator
- toLE,      // toLE represents a less than or equal operator
- toEQ,      // toEQ represents an equality operator
- toNE,      // toNE represents a not equal operator
- toAND,     // toAND represents a logical AND operator
- toXOR,     // toXOR represents a logical XOR operator
- toOR,      // toOR represents a logical OR operator
- toSET,     // toSET represents a set operator
- toSETADD,  // toSETADD represents a set addition operator
- toSETSUB,  // toSETSUB represents a set subtraction operator
- toSETMUL,  // toSETMUL represents a set multiplication operator
- toSETDIV,  // toSETDIV represents a set division operator
- toSETMOD,  // toSETMOD represents a set modulo operator
- toSETASL,  // toSETASL represents a set arithmetic shift left operator
- toSETASR,  // toSETASR represents a set arithmetic shift right operator
- toSETLSR,  // toSETLSR represents a set logical shift right operator
- toSETAND,  // toSETAND represents a set logical AND operator
- toSETXOR,  // toSETXOR represents a set logical XOR operator
- toSETOR,   // toSETOR represents a set logical OR operator
- toSETPOW,  // toSETPOW represents a set power operator
- toSEMI,    // toSEMI represents a semicolon operator
- toCOMMA,   // toCOMMA represents a comma operator
- toCONTINUE, // toCONTINUE represents a continue operator for continue scanning
- toTERMINALS // toTERMINALS must be the last operator in the list and represents the total number of
+ toBEGIN,   // 0  toBEGIN must be the first operator in the list
+ toOPERAND, // 1  toOPERAND represents an operand in the expression
+ toERROR,   // 2  toERROR represents an error in the expression
+ toEND,     // 3  toEND represents the end of the expression
+ toLPAR,    // 4  toLPAR represents a left parenthesis '('
+ toRPAR,    // 5  toRPAR represents a right parenthesis ')'
+ toFUNC,    // 6  toFUNC represents a function
+ toSOLVE,   // 7  toSOLVE represents a solve, integr and diff function
+ toPOSTINC, // 8  toPOSTINC represents a post-increment (v++) operator
+ toPOSTDEC, // 9  toPOSTDEC represents a post-decrement (v--) operator
+ toFACT,    // 10 toFACT represents a factorial 'n!' operator
+ toPREINC,  // 11 toPREINC represents a pre-increment (++v) operator
+ toPREDEC,  // 12 toPREDEC represents a pre-decrement (--v) operator
+ toPLUS,    // 13 toPLUS represents an '+v' operator
+ toMINUS,   // 14 toMINUS represents a '-v' operator
+ toNOT,     // 15 toNOT represents a logical NOT operator
+ toCOM,     // 16 toCOM represents a bitwise complement '~' operator
+ toPOW,     // 17 toPOW represents a power '^' operator
+ toPERCENT, // 18 toPERCENT represents a percentage '%' operator
+ toMUL,     // 19 toMUL represents a multiplication operator
+ toDIV,     // 20 toDIV represents a division operator
+ toMOD,     // 21 toMOD represents a modulo operator
+ toPAR,     // 22 toPAR represents a parenthesis operator
+ toADD,     // 23 toADD represents an addition operator
+ toSUB,     // 24 toSUB represents a subtraction operator
+ toASL,     // 25 toASL represents a arithmetic shift left operator
+ toASR,     // 26 toASR represents a arithmetic shift right operator
+ toLSR,     // 27 toLSR represents a logical shift right operator
+ toGT,      // 28 toGT represents a greater than operator
+ toGE,      // 29 toGE represents a greater than or equal operator
+ toLT,      // 30 toLT represents a less than operator
+ toLE,      // 31 toLE represents a less than or equal operator
+ toEQ,      // 32 toEQ represents an equality operator
+ toNE,      // 33 toNE represents a not equal operator
+ toAND,     // 34 toAND represents a logical AND operator
+ toXOR,     // 35 toXOR represents a logical XOR operator
+ toOR,      // 36 toOR represents a logical OR operator
+ toSET,     // 37 toSET represents a set operator
+ toSETADD,  // 38 toSETADD represents a set addition operator
+ toSETSUB,  // 39 toSETSUB represents a set subtraction operator
+ toSETMUL,  // 40 toSETMUL represents a set multiplication operator
+ toSETDIV,  // 41 toSETDIV represents a set division operator
+ toSETMOD,  // 42 toSETMOD represents a set modulo operator
+ toSETASL,  // 43 toSETASL represents a set arithmetic shift left operator
+ toSETASR,  // 44 toSETASR represents a set arithmetic shift right operator
+ toSETLSR,  // 45 toSETLSR represents a set logical shift right operator
+ toSETAND,  // 46 toSETAND represents a set logical AND operator
+ toSETXOR,  // 47 toSETXOR represents a set logical XOR operator
+ toSETOR,   // 48 toSETOR represents a set logical OR operator
+ toSETPOW,  // 49 toSETPOW represents a set power operator
+ toSEMI,    // 50 toSEMI represents a semicolon operator
+ toCOMMA,   // 51 toCOMMA represents a comma operator
+ toCONTINUE, // 52 toCONTINUE represents a continue operator for continue scanning
+ toTERMINALS // 53 toTERMINALS must be the last operator in the list and represents the total number of
              // operators
 };
 
@@ -202,19 +206,22 @@ enum t_symbol // t_symbol represents the type of a symbol in the calculator
 {
  tsVARIABLE, // tsVARIABLE represents a variable symbol
  tsCONSTANT, // tsCONSTANT represents a constant symbol
- tsIFUNCF1, // int f(float x)
- tsSFUNCF1, // char* f(float x)
- tsIFUNC1,  // int f(int x)
- tsIFUNC2,  // int f(int x, int y)
- tsFFUNC1,  // float f(float x)
- tsFFUNC2,  // float f(float x, float y)
- tsFFUNC3,  // float f(float x, float y, float z)
- tsPFUNCn,  // int printf(char *format, ...)
+ tsIFUNCF1,  // int f(float x)
+ tsSFUNCF1,  // char* f(float x)
+ tsIFUNC1,   // int f(int x)
+ tsIFUNC2,   // int f(int x, int y)
+ tsFFUNC1,   // float f(float x)
+ tsFFUNC2,   // float f(float x, float y)
+ tsFFUNC3,   // float f(float x, float y, float z)
+ tsPFUNCn,   // int printf(char *format, ...)
  tsSFUNCF2,  // float const(char *name, float value)
- tsSIFUNC1, // int f(char *s)
- tsVFUNC1,  // void vfunc(value* res, value* arg, int idx)
- tsVFUNC2,  // void vfunc(value* res, value* arg1, value* arg2, int idx)
+ tsSIFUNC1,  // int f(char *s)
+ tsVFUNC1,   // void vfunc(value* res, value* arg, int idx)
+ tsVFUNC2,   // void vfunc(value* res, value* arg1, value* arg2, int idx)
  tsUFUNCT,   // User-defined function
+ tsSOLVE,    // Solve operator for solving equations
+ tsINTEGR,   // Integration operator for numerical integration
+ tsDIFF,     // Differentiation operator for numerical differentiation
  tsNUM
 };
 
@@ -235,6 +242,9 @@ enum t_symbol // t_symbol represents the type of a symbol in the calculator
 #define MASK_VFUNC1 (1<< tsVFUNC1) // tsVFUNC1 represents a void function with one value argument and one int argument
 #define MASK_VFUNC2 (1<< tsVFUNC2) // tsVFUNC2 represents a void function with two value arguments and one int argument
 #define MASK_UFUNCT (1<< tsUFUNCT) // tsUFUNCT represents a user-defined function
+#define MASK_SOLVE  (1 << tsSOLVE)  // tsSOLVE represents a solve operator for solving equations
+#define MASK_INTEGR (1 << tsINTEGR) // tsINTEGR represents an integration operator for numerical integration
+#define MASK_DIFF   (1 << tsDIFF) // tsDIFF represents a differentiation operator for numerical differentiation
 #define MASK_DEFAULT (MASK_CONSTANT | MASK_IFUNCF1 | MASK_SFUNCF1 | MASK_IFUNC1 \
                     | MASK_IFUNC2 | MASK_FFUNC1  | MASK_FFUNC2 | MASK_FFUNC3  \
                     | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 \
@@ -242,40 +252,41 @@ enum t_symbol // t_symbol represents the type of a symbol in the calculator
 
 enum v_func // v_func represents the index of a built-in function in the calculator
 {
- vf_abs,
- vf_pol,
+ vf_abs, // Absolute value function
+ vf_pol, // Polar coordinates function
 
- vf_sin,
- vf_cos,
- vf_tan,
- vf_cot,
+ vf_sin, // Sine function
+ vf_cos, // Cosine function
+ vf_tan, // Tangent function
+ vf_cot, // Cotangent function
 
- vf_sinh,
- vf_cosh,
- vf_tanh,
- vf_ctnh,
+ vf_sinh, // Hyperbolic sine function
+ vf_cosh, // Hyperbolic cosine function
+ vf_tanh, // Hyperbolic tangent function
+ vf_ctnh, // Hyperbolic cotangent function
 
- vf_asin,
- vf_acos,
- vf_atan,
- vf_acot,
+ vf_asin, // Arcsine function
+ vf_acos, // Arccosine function
+ vf_atan, // Arctangent function
+ vf_acot, // Arccotangent function
 
- vf_asinh,
- vf_acosh,
- vf_atanh,
- vf_acoth,
+ vf_asinh, // Arcsine hyperbolic sine function
+ vf_acosh, // Arccosine hyperbolic cosine function
+ vf_atanh, // Arctangent hyperbolic tangent function
+ vf_acoth, // Arccotangent hyperbolic cotangent function
 
- vf_exp,
- vf_log,
- vf_sqrt,
+ vf_exp, // Exponential function
+ vf_log, // Natural logarithm function
+ vf_sqrt, // Square root function
 
- vf_pow,
- vf_rootn,
- vf_logn,
+ vf_pow, // Power function
+ vf_rootn, // N-th root function
+ vf_logn,  // Logarithm with specified base function
 
- vf_re,
- vf_im,
- vf_cplx,
+ vf_re, // Real part of a complex number function
+ vf_im, // Imaginary part of a complex number function
+ vf_cplx, // Complex number construction function
+ vf_polar, // Polar coordinates construction function
 
  vf_num
 };
@@ -343,6 +354,14 @@ struct StringNode // StringNode represents a node in a linked list of strings us
  StringNode *next; // Next node in the list
 };
 
+struct GKResult
+{
+ float__t value;
+ float__t error;
+ bool ok;
+};
+
+
 class calculator // calculator represents the main class for the expression calculator, which
                  // manages the state of the calculator, including variables, functions, stacks, and
                  // parsing logic
@@ -364,6 +383,8 @@ class calculator // calculator represents the main class for the expression calc
  char c_imaginary; // Imaginary unit character
  bool expr;    // Expression flag
  char sres[STRBUF]; // String result buffer
+ char lastvar[MAXOP];  // Last variable name used in the expression, if it is a string
+
  int64_t result_ival; // Integer result
  float__t result_fval; // Float result
  float__t result_imval; // Imaginary part of complex result
@@ -383,6 +404,8 @@ class calculator // calculator represents the main class for the expression calc
  symbol *find (const char *name);    // Find a symbol in the hash table by name
  symbol *addUF (const char *name, const char *expr); // Add a user-defined function to the calculator
                                                     // with the given name and expression
+ t_operator sscan (symbol *sym); // Scan body of the solve, integr and diff 
+
  t_operator scan (bool operand,
                   bool percent); // Scan the next token in the expression and return its operator type
  void error (int pos, const char *msg); // Report an error at the given position with the specified message
@@ -408,6 +431,27 @@ class calculator // calculator represents the main class for the expression calc
  void clear_v_stack (); // Clear the value stack
  void addim (void); // Add imaginary unit
  
+ float__t Solve (const char *expr); // Solve an equation given by the expression and return the
+                                    // solution as a floating-point value
+
+ float__t gkEval (calculator *pCalc, char *sexpr, const char *svar,
+                  float__t x); // Evaluate a function for a given expression, variable name, and
+                               // variable value, and return the result as a floating-point value
+ GKResult gkPanel (calculator *pCalc, char *sexpr, const char *svar, float__t a, float__t b);
+ GKResult gkAdaptive (calculator *pCalc, 
+                     char *sexpr, 
+                     const char *svar, 
+                     float__t a,
+                     float__t b, 
+                     float__t tol, 
+                     int depth, 
+                     int maxDepth, 
+                     int &callCount, 
+                     int maxCalls);
+
+ float__t Integr (const char *expr); // Integrate an equation given by the expression and return the
+                                    // result as a floating-point value
+ float__t Diff (const char *expr); // Differentiate an equation given by the expression and return the
  public:
  calculator (int cfg = PAS + SCI + UPCASE,
              symbol **symtab = nullptr,
@@ -436,6 +480,8 @@ class calculator // calculator represents the main class for the expression calc
  float__t  evaluate (char *expr, __int64 *piVal = nullptr,
            float__t *pimval = nullptr); // Evaluate an expression and return the result as a floating-point value,
                        // with optional pointers to store integer and imaginary results
+ inline char *get_last_var (void) { return lastvar; }; // Get the last variable name assigned in the 
+                                                       //expression  
  int64_t get_int_res () { return result_ival; };
  float__t get_re_res () { return result_fval; };
  float__t get_im_res () { return result_imval; };

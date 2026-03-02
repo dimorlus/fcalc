@@ -263,7 +263,7 @@ int normz (float__t &re, float__t &im)
 //---------------------------------------------------------------------------
  // Convert a floating-point number to a string with normalized scientific notation (e.g., "1.23e3"
  // for 1230)
-int d2nrmstr (char *str, float__t d)
+ int d2nrmstr (char *str, float__t d)
 {
  if (isNan (d))
   return sprintf (str, "%e", d);
@@ -359,7 +359,7 @@ int b2scistr (char *str, float__t d)
 }
 //---------------------------------------------------------------------------
 // Convert an angle in radians to a string in degrees, minutes, and seconds format (e.g.,
-// "30`15'20"")
+// "30°15'20"")
 int dgr2str (char *str, float__t radians)
 {
  const char cdeg[] = { 96, 39, 34 }; // ` ' "

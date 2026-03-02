@@ -31,7 +31,7 @@ OTHERFILES =
 # ---------------------------------------------------------------------------
 DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
-USERDEFINES = _DEBUG
+USERDEFINES = 
 SYSDEFINES = NO_STRICT
 INCLUDEPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\include;$(BCB)\include\vcl
 LIBPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
@@ -42,14 +42,13 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a1 -b- -k -y -v -vi- -c \
-    -tW -tWM
+CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a1 -b- -k- -vi -c -tW -tWM
 IDLCFLAGS = -I"C:\Program Files (x86)\Borland\CBuilder6\Projects" -I$(BCB)\include \
     -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
-PFLAGS = -$Y+ -$W -$O- -$A8 -v -JPHNE -M
+PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
 RFLAGS = 
-AFLAGS = /mx /w2 /zi
-LFLAGS = -D"" -aa -Tpe -x -Gn -v
+AFLAGS = /mx /w2 /zn
+LFLAGS = -D"" -aa -Tpe -x -Gn
 # ---------------------------------------------------------------------------
 ALLOBJ = c0w32.obj sysinit.obj $(OBJFILES)
 ALLRES = $(RESFILES)

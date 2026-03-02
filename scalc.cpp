@@ -32,6 +32,10 @@
 
 #endif //__BORLANDC__
 
+#ifdef _ENABLE_DEBUG_LOG_
+#include <fstream>
+#endif
+
 #include "scalc.h"
 #include "sfmts.h"
 #include "sfunc.h"
@@ -39,16 +43,23 @@
 #include "ver.h"
 
 #ifdef __BORLANDC__
-#define M_PI_2l 1.5707963267948966192313216916398
-#define PHI     1.6180339887498948482045868343656 //(1+sqrt(5))/2 golden ratio
+#define M_PI_2l 1.5707963267948966192313216916398L
+#define PHI     1.6180339887498948482045868343656L //(1+sqrt(5))/2 golden ratio
 #pragma warn -8004 // assigned a value that is never used
+// Source - https://stackoverflow.com/a/59801882
+// Posted by chux, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-03-02, License - CC BY-SA 4.0
 
+#include <float.h>
+int isinf_f(float x) { return x < -FLT_MAX || x > FLT_MAX; }
+int isinf_d(double x) { return x < -DBL_MAX || x > DBL_MAX; }
+int isinf_l(long double x) { return x < -LDBL_MAX||x > LDBL_MAX; }
 #else //__BORLANDC__
 
-#define M_PI    3.1415926535897932384626433832795
-#define M_PI_2l 1.5707963267948966192313216916398
-#define M_E     2.7182818284590452353602874713527
-#define PHI     1.6180339887498948482045868343656 //(1+sqrt(5))/2 golden ratio
+#define M_PI    3.1415926535897932384626433832795L
+#define M_PI_2l 1.5707963267948966192313216916398L
+#define M_E     2.7182818284590452353602874713527L
+#define PHI     1.6180339887498948482045868343656L //(1+sqrt(5))/2 golden ratio
 #pragma warning(disable : 4996) // 'function': was declared deprecated
 #pragma warning(disable : 4244) // 'argument': conversion from 'type1' to 'type2', possible loss of data
 #endif //__BORLANDC__
@@ -56,11 +67,29 @@
 #define _WIN_
 #define _WCHAR_ // L'c' and 'c'W input format allow
 #define _ENABLE_PREIMAGINARY_
-#define _STR_VAR_FREE_ 
+#define _STR_VAR_FREE_
 
 // Macros to determine if an operator is binary or unary based on its position in the enumeration
 #define BINARY(opd) (opd >= toPOW)
 #define UNARY(opd)  ((opd >= toPOSTINC) && (opd <= toCOM))
+
+#ifdef _ENABLE_DEBUG_LOG_
+// Debug logging function
+void DebugLog (const char *format, ...)
+{
+ va_list args;
+ va_start (args, format);
+ char message[1024];
+ vsnprintf (message, sizeof (message), format, args);
+ va_end (args);
+
+ static std::ofstream debugFile ("debug_stack.txt", std::ios::app);
+ debugFile << message << std::endl;
+ debugFile.flush ();
+}
+#else // Stub function when debug logging is disabled
+//#define DebugLog(x, ...) ((void)0)
+#endif // _ENABLE_DEBUG_LOG_
 
 
 float__t Const (void *clc, char *name, float__t x)
@@ -144,6 +173,12 @@ calculator::calculator (int cfg, symbol **symtab, int copyMask, int deep)
    return;
   }
 
+ add (tsSOLVE, "solve", nullptr);
+ add (tsINTEGR, "integr", nullptr);
+ add (tsINTEGR, "integral", nullptr);
+ add (tsDIFF, "diff", nullptr);
+ add (tsDIFF, "derivative", nullptr);
+
  add (tsSFUNCF2, "const", (void *)Const);
  add (tsSFUNCF2, "var", (void *)Var);
 
@@ -197,6 +232,7 @@ calculator::calculator (int cfg, symbol **symtab, int copyMask, int deep)
  add (tsVFUNC2, vf_cplx, "cmplx", (void *)vfunc2);
  add (tsVFUNC2, vf_cplx, "cplx", (void *)vfunc2);
  add (tsVFUNC2, vf_cplx, "cpx", (void *)vfunc2);
+ add (tsVFUNC2, vf_polar, "polar", (void *)vfunc2);
  add (tsVFUNC1, vf_re, "re", (void *)vfunc);
  add (tsVFUNC1, vf_im, "im", (void *)vfunc);
 
@@ -1520,25 +1556,25 @@ void calculator::scientific (char *&fpos, float__t &fval)
   case 'Q':
    fpos++;
    if (isCMP (fpos))
-    fval *= 1.267650600228229401496703205376e+30; // 2**100
+    fval *= 1.267650600228229401496703205376e+30L; // 2**100
    else engineering (1e30, fpos, fval);
    break;
   case 'R':
    fpos++;
    if (isCMP (fpos))
-    fval *= 1.237940039285380274899124224e+27; // 2**90
+    fval *= 1.237940039285380274899124224e+27L; // 2**90
    else engineering (1e27, fpos, fval);
    break;
   case 'Y':
    fpos++;
    if (isCMP (fpos))
-    fval *= 1.208925819614629174706176e+24; // 2**80
+    fval *= 1.208925819614629174706176e+24L; // 2**80
    else engineering (1e24, fpos, fval);
    break;
   case 'Z':
    fpos++;
    if (isCMP (fpos))
-    fval *= 1.180591620717411303424e+21; // 2**70
+    fval *= 1.180591620717411303424e+21L; // 2**70
    else engineering (1e21, fpos, fval);
    break;
   case 'E':
@@ -1660,12 +1696,602 @@ void calculator::errorf (int pos, const char *fmt, ...)
  errpos = pos;
 }
 
-// Skip whitespace and parse the next operator from the input buffer, returning the operator type
+// Newton-Raphson solution of the equation solve(x(2x+2)-2, x:=0)
+// expr -> x(2x+2)-2, x:=0
+float__t calculator::Solve (const char *expr)
+{
+ if (expr && *expr)
+  {
+   char sexpr[STRBUF];
+   char svar[STRBUF];
+   char nvar[MAXOP];
+   char *p = sexpr;
+   float__t vvar = qnan;
+   // copy all characters from expr (i. e. 'x(2x+2)-2' ) to sexpr until the first ',' or 
+   // end of string is reached or  buffer limit is reached
+   while (*expr && (*expr != ',') && (p - sexpr < STRBUF - 1))
+    {
+     *p++ = *expr++;
+    }
+   *p = '\0'; // null-terminate the string
+   // copy the remaining characters (i. e. 'x:=0' ) from expr to svar (if any) until the end 
+   // of string is reached or buffer limit is reached
+   if (*expr == ',')
+    {
+     expr++;
+     p = svar;
+     while (*expr && (p - svar < STRBUF - 1))
+      {
+       *p++ = *expr++;
+      }
+     *p = '\0'; // null-terminate the string
+    }
+
+   calculator *pCalculator = new calculator (scfg, hash_table, MASK_DEFAULT + MASK_VARIABLE, deep);
+   if (!pCalculator)
+    {
+     errorf (pos, "Out of memory");
+     result_fval = qnan;
+     return qnan;
+    }
+
+   float__t result = pCalculator->evaluate (svar);
+   if (isnan(result) || pCalculator->err[0])
+    {
+     errorf (pos, "%s", pCalculator->err);
+     delete pCalculator;
+     result_fval = qnan;
+     return qnan;
+    }
+
+   char *lv = (char *)pCalculator->get_last_var ();
+   strcpy (nvar, lv);
+   vvar = result;
+
+   {
+    // Newton-Raphson iteration
+    const float__t tol = 1e-12L;
+    const int maxIter  = 100;
+    float__t x         = vvar;
+    bool converged     = false;
+
+    for (int i = 0; i < maxIter; i++)
+     {
+      pCalculator->addfvar (nvar, x);
+      float__t fx = pCalculator->evaluate (sexpr);
+      if (isnan (fx) || pCalculator->err[0])
+       {
+        errorf (pos, "%s", pCalculator->err[0] ? pCalculator->err : "Error evaluating expression");
+        result_fval = qnan;
+        delete pCalculator;
+        return qnan;
+       }
+
+      if (fabsl (fx) < tol)
+       {
+        converged = true;
+        vvar      = x;
+        break;
+       }
+
+      // Numerical derivative (central difference)
+      #ifdef __BORLANDC__
+      float__t ax = fabsl (x);
+      float__t delta = ((ax>1.0L)?ax:1.0L) * 1.5e-10L; // slightly smaller for long double
+      #else
+      float__t delta = fmaxl (fabsl (x), 1.0L) * 1.5e-10L; // slightly smaller for long double
+      #endif
+      pCalculator->addfvar (nvar, x + delta);
+      float__t fxp = pCalculator->evaluate (sexpr);
+      if (isnan (fxp) || pCalculator->err[0])
+       {
+        errorf (pos, "%s", pCalculator->err);
+        result_fval = qnan;
+        delete pCalculator;
+        return qnan;
+       }
+
+      pCalculator->addfvar (nvar, x - delta);
+      float__t fxm = pCalculator->evaluate (sexpr);
+      if (isnan (fxm) || pCalculator->err[0])
+       {
+        errorf (pos, "%s", pCalculator->err);
+        result_fval = qnan;
+        delete pCalculator;
+        return qnan;
+       }
+
+      float__t fp = (fxp - fxm) / (2.0L * delta);
+      if (fabsl (fp) < tol)
+       {
+        // Derivative is close to zero - try to shift
+        x += delta * 1000.0L;
+        continue;
+       }
+
+      float__t x_new = x - fx / fp;
+      #ifdef __BORLANDC__
+      if (isnan (x_new) || isinf_l (x_new))
+      #else
+      if (isnan (x_new) || isinf (x_new))
+      #endif
+       {
+        errorf (pos, "Solution diverged");
+        result_fval = qnan;
+        delete pCalculator;
+        return qnan;
+       }
+
+      if (fabsl (x_new - x) < tol * (1.0L + fabsl (x)))
+       {
+        converged = true;
+        vvar      = x_new;
+        break;
+       }
+
+      x = x_new;
+     }
+
+    if (!converged)
+     {
+      errorf (pos, "No solution found");
+      result_fval = qnan;
+      delete pCalculator;
+      return qnan;
+     }
+   }
+
+   delete pCalculator;
+   return vvar;
+  }
+ else
+  {
+   errorf (0, "empty expression");
+   return qnan;
+  }
+ return qnan;
+}
+
+
+// Gauss-Kronrod G7/K15 adaptive quadrature
+// C++98 compatible (BCB6 / VS2022)
+//
+// K15 nodes (positive half, index 0 = center node = 0.0)
+// G7 uses nodes at indices 0, 2, 4, 6  (every other K15 node)
+
+static const float__t GK_NODES[8] = {
+ 0.0L,
+ 0.20778495500789846760L,
+ 0.40584515137739716691L,
+ 0.58608723546769113029L,
+ 0.74153118559939443986L,
+ 0.86486442335976907279L,
+ 0.94910791234275852453L,
+ 0.99145537112081263921L,
+};
+
+// K15 weights: index i corresponds to nodes +-GK_NODES[i]
+// (index 0 has no symmetry — centre point)
+static const float__t K15_WEIGHTS[8] = {
+ 0.20948214108472782801L, 0.20443294007529889241L, 0.19035057806478540991L, 0.16900472663926790283L,
+ 0.14065325971552591875L, 0.10479001032224928880L, 0.06309209262997855329L, 0.02293532201052922497L,
+};
+
+// G7 weights: 4 values for nodes at GK_NODES[0,2,4,6]
+static const float__t G7_WEIGHTS[4] = {
+ 0.41795918367346938776L,
+ 0.38183005050511894495L,
+ 0.27970539148927664160L,
+ 0.12948496616886732340L,
+};
+
+// G7 node indices into GK_NODES[]
+static const int G7_IDX[4] = { 0, 2, 4, 6 };
+
+// ---------------------------------------------------------------------------
+
+// Evaluate f(x) = sexpr with variable svar set to x in child calculator
+// Returns qnan on any error
+float__t calculator::gkEval (calculator *pCalc, char *sexpr, const char *svar, float__t x)
+{
+ pCalc->addfvar (svar, x);
+ float__t val = pCalc->evaluate (sexpr);
+ if (pCalc->err[0]) return qnan;
+ return val;
+}
+
+// Single G7/K15 panel on [a, b], no recursion
+GKResult calculator::gkPanel (calculator *pCalc, char *sexpr, const char *svar, float__t a,
+                              float__t b)
+{
+ GKResult res    = { 0.0L, 0.0L, true };
+ float__t center = (a + b) / 2.0L;
+ float__t half   = (b - a) / 2.0L;
+
+ // f values at all 15 points: fL[i] = f(center - half*node[i])
+ //                            fR[i] = f(center + half*node[i])
+ // index 0: fL[0] == fR[0] == f(center)
+ float__t fL[8], fR[8];
+ fL[0] = fR[0] = gkEval (pCalc, sexpr, svar, center);
+ if (isnan (fL[0]))
+  {
+   res.ok = false;
+   return res;
+  }
+
+ for (int i = 1; i < 8; i++)
+  {
+   fL[i] = gkEval (pCalc, sexpr, svar, center - half * GK_NODES[i]);
+   if (isnan (fL[i]))
+    {
+     res.ok = false;
+     return res;
+    }
+   fR[i] = gkEval (pCalc, sexpr, svar, center + half * GK_NODES[i]);
+   if (isnan (fR[i]))
+    {
+     res.ok = false;
+     return res;
+    }
+  }
+
+ // K15: sum over all 8 node pairs (index 0 counted once)
+ float__t k15 = K15_WEIGHTS[0] * fL[0];
+ for (int i = 1; i < 8; i++) k15 += K15_WEIGHTS[i] * (fL[i] + fR[i]);
+ k15 *= half;
+
+ // G7: sum over node indices 0, 2, 4, 6
+ float__t g7 = G7_WEIGHTS[0] * fL[0];
+ for (int i = 1; i < 4; i++)
+  {
+   int idx = G7_IDX[i];
+   g7 += G7_WEIGHTS[i] * (fL[idx] + fR[idx]);
+  }
+ g7 *= half;
+
+ res.value = k15;
+ res.error = fabsl (k15 - g7);
+ return res;
+}
+
+// Adaptive G7/K15: recursively subdivide until error < tol or maxDepth reached
+GKResult calculator::gkAdaptive (calculator *pCalc, char *sexpr, const char *svar, float__t a,
+                                 float__t b,
+                                 float__t tol, // not divided!
+                                 int depth, int maxDepth,
+                                 int &callCount, 
+                                 int maxCalls)
+{
+ if (++callCount > maxCalls) // hard stop
+  {
+   GKResult res = gkPanel (pCalc, sexpr, svar, a, b);
+   res.ok       = true;
+   return res;
+  }
+
+ GKResult res = gkPanel (pCalc, sexpr, svar, a, b);
+ if (!res.ok) return res;
+
+ if (res.error <= tol || depth >= maxDepth) return res;
+
+ float__t mid = (a + b) / 2.0L;
+
+ GKResult left  = gkAdaptive (pCalc, sexpr, svar, a, mid, tol, depth + 1, maxDepth, callCount, maxCalls);
+ GKResult right = gkAdaptive (pCalc, sexpr, svar, mid, b, tol, depth + 1, maxDepth, callCount, maxCalls);
+
+ if (!left.ok || !right.ok)
+  {
+   GKResult bad = { qnan, qnan, false };
+   return bad;
+  }
+
+ GKResult combined;
+ combined.value = left.value + right.value;
+ combined.error = left.error + right.error;
+ combined.ok    = true;
+ return combined;
+}
+
+// integr(expr(x), from, to, x) integr(sin(x)/x, 0.001, pi, x)
+// expr -> sin(x)/x, x
+float__t calculator::Integr (const char *expr)
+{
+ if (expr && *expr)
+  {
+   char sexpr[STRBUF];
+   char sfrom[MAXOP];
+   char sto[MAXOP];
+   char svar[STRBUF];
+
+   float__t vfrom = qnan;
+   float__t vto   = qnan;
+   float__t fvx   = qnan;
+   float__t result = 0;
+   int callCount   = 0;
+
+   char *p = sexpr;
+   
+   // copy all characters from expr (i. e. 'sin(x)/x' ) to sexpr until the first ',' or
+   // end of string is reached or  buffer limit is reached
+   while (*expr && (*expr != ',') && (p - sexpr < STRBUF - 1)) *p++ = *expr++;
+   *p = '\0'; // null-terminate the string
+   if (*expr == ',') expr++; // skip the comma
+   p  = sfrom;
+   while (*expr && (*expr != ',') && (p - sfrom < MAXOP - 1)) *p++ = *expr++;
+   *p = '\0'; // null-terminate the string
+   if (*expr == ',') expr++; // skip the comma
+   p  = sto;
+   while (*expr && (*expr != ',') && (p - sto < MAXOP - 1)) *p++ = *expr++;
+   *p = '\0'; // null-terminate the string
+   if (*expr == ',') expr++; // skip the comma
+   p  = svar;
+   while (isspace (*expr & 0x7f)) expr++;
+   while (*expr && (*expr != ')') && (p - svar < STRBUF - 1)) 
+    if (*expr && (isalnum (*expr & 0x7f) || *expr == '_')) *p++ = *expr++;
+   *p = '\0'; // null-terminate the string
+
+   calculator *pCalculator = new calculator (scfg, hash_table, MASK_DEFAULT + MASK_VARIABLE, deep);
+   if (!pCalculator)
+    {
+     errorf (pos, "Out of memory");
+     result_fval = qnan;
+     return qnan;
+    }
+
+   vfrom = pCalculator->evaluate (sfrom);
+   if (isnan (vfrom) || pCalculator->err[0])
+    {
+     errorf (pos, "%s", pCalculator->err);
+     result_fval = qnan;
+     delete pCalculator;
+     return qnan;
+    }
+   vto = pCalculator->evaluate (sto);
+   if (isnan (vto) || pCalculator->err[0])
+    {
+     errorf (pos, "%s", pCalculator->err);
+     result_fval = qnan;
+     delete pCalculator;
+     return qnan;
+    }
+
+   {
+    pCalculator->addfvar (svar, vfrom);
+    float__t fvx = pCalculator->evaluate (sexpr); // evaluate the function for 
+                                //the syntax check before starting the integration
+                                         
+    if (isnan (fvx) || pCalculator->err[0])
+     {
+      errorf (pos, "%s", pCalculator->err);
+      result_fval = qnan;
+      delete pCalculator;
+      return qnan;
+     }
+   }
+
+   GKResult gkresult = gkAdaptive (pCalculator,
+                                   sexpr,        // expression 
+                                   svar,         // variable name ("x")
+                                   vfrom,        // lower limit
+                                   vto,          // upper limit
+                                   1e-10L,       // tolerance
+                                   0,            // initial depth
+                                   20,           // maximum depth
+                                   callCount,    // call count
+                                   1000);        // maximum calls
+   if (!gkresult.ok)
+    {
+     errorf (pos, "Integration failed");
+     result_fval = qnan;
+     delete pCalculator;
+     return qnan;
+    }
+   result = gkresult.value;
+   delete pCalculator;
+   return result;
+  }
+ return qnan; // placeholder for actual integration result
+}
+
+// Numerical differentiation using central difference
+// diff(expr(x), point, x) diff(sin(x)/x, 0.01, x)
+float__t calculator::Diff (const char *expr)
+{
+ if (expr && *expr)
+  {
+     char sexpr[STRBUF];
+     char sfrom[MAXOP];
+     char svar[STRBUF];
+
+     float__t x  = qnan;
+     float__t fvx    = qnan;
+     float__t result = 0;
+
+     char *p = sexpr;
+
+     // copy all characters from expr (i. e. 'sin(x)/x' ) to sexpr until the first ',' or
+     // end of string is reached or  buffer limit is reached
+     while (*expr && (*expr != ',') && (p - sexpr < STRBUF - 1)) *p++ = *expr++;
+     *p = '\0';                // null-terminate the string
+     if (*expr == ',') expr++; // skip the comma
+     p = sfrom;
+     while (*expr && (*expr != ',') && (p - sfrom < MAXOP - 1)) *p++ = *expr++;
+     *p = '\0';                // null-terminate the string
+     if (*expr == ',') expr++; // skip the comma
+     p = svar;
+     while (isspace (*expr & 0x7f)) expr++;
+     while (*expr && (*expr != ')') && (p - svar < STRBUF - 1))
+      if (*expr && (isalnum (*expr & 0x7f) || *expr == '_')) *p++ = *expr++;
+     *p = '\0'; // null-terminate the string
+
+     calculator *pCalculator = new calculator (scfg, hash_table, MASK_DEFAULT + MASK_VARIABLE, deep);
+     if (!pCalculator)
+      {
+       errorf (pos, "Out of memory");
+       result_fval = qnan;
+       return qnan;
+      }
+
+     x = pCalculator->evaluate (sfrom);
+     if (isnan (x) || pCalculator->err[0])
+      {
+       errorf (pos, "%s", pCalculator->err);
+       result_fval = qnan;
+       delete pCalculator;
+       return qnan;
+      }
+
+     // Numerical derivative (central difference)
+     #ifdef __BORLANDC__
+     float__t ax = fabsl (x);
+     float__t delta = ((ax>1.0L)?ax:1.0L) * 1.5e-10L; // slightly smaller for long double
+     #else
+     float__t delta = fmaxl (fabsl (x), 1.0L) * 1.5e-10L; // slightly smaller for long double
+     #endif
+
+     pCalculator->addfvar (svar, x + delta);
+     float__t fxp = pCalculator->evaluate (sexpr);
+     if (isnan (fxp) || pCalculator->err[0])
+      {
+       errorf (pos, "%s", pCalculator->err);
+       result_fval = qnan;
+       delete pCalculator;
+       return qnan;
+      }
+
+     pCalculator->addfvar (svar, x - delta);
+     float__t fxm = pCalculator->evaluate (sexpr);
+     if (isnan (fxm) || pCalculator->err[0])
+      {
+       errorf (pos, "%s", pCalculator->err);
+       result_fval = qnan;
+       delete pCalculator;
+       return qnan;
+      }
+
+     float__t fp = (fxp - fxm) / (2.0L * delta);
+
+     delete pCalculator;
+     return fp;
+    }
+  return qnan; 
+}
+
+// solve (x(2x+2)-2,x:=0)
+// integr (x(2x+2)-2,0,10,x)
+// diff (x(2x+2)-2, 0, x)
+// extract expression in () after the function name, and put it as string in the symbol table,
+// put variable with tvSOLVE tag and 'x(2x+2)-2,x:=0' in sval to variable stack
+// and return toOPERAND or toERROR if something wrong.
+t_operator calculator::sscan (symbol *sym)
+{
+ char sbuf[STRBUF];
+ int sidx              = 0;
+ int comma_count       = 0;
+ int parenthesis_count = 1;
+
+ char *ipos = buf + pos;
+ if (*ipos == ')')
+  {
+   pos++;
+   return toRPAR;
+  }
+ else 
+ if (*ipos == '\0') return toEND; // end of input
+
+ // skip whitespace befor '('
+ while (isspace (*ipos & 0x7f)) ipos++;
+
+ while (*ipos && (sidx < STRBUF - 1) && (parenthesis_count > 0))
+  {
+   if (*ipos == ',') comma_count++;
+   else 
+   if (*ipos == '(') parenthesis_count++;
+   else 
+   if (*ipos == ')') parenthesis_count--;
+   sbuf[sidx++] = *ipos++;
+  }
+ if (sidx && sbuf[sidx - 1] == ')') sbuf[sidx - 1] = '\0';
+ sbuf[STRBUF - 1] = '\0'; // null-terminate the string
+
+ if (sym)
+  {
+   if (sym->tag == tsSOLVE) // solve (x(2x+2)-2,x:=0)
+    {
+     if (parenthesis_count == 0 && comma_count == 1)
+      {
+       v_stack[v_sp].tag = tvSOLVE;
+      }
+     else
+      {
+       if (parenthesis_count)
+        error ("unmatched parenthesis in solve expression");
+       else
+        error ("wrong number of arguments in solve expression");
+       return toERROR;
+      }
+    }
+   else 
+   if (sym->tag == tsINTEGR) // integr (x(2x+2)-2,0,10,x)
+    {
+     if (parenthesis_count == 0 && comma_count == 3)
+      {
+       v_stack[v_sp].tag = tvINTEGR;
+      }
+     else
+      {
+       if (parenthesis_count)
+        error ("unmatched parenthesis in integral expression");
+       else
+        error ("wrong number of arguments in integral expression");
+       return toERROR;
+      }
+    }
+   else 
+   if (sym->tag == tsDIFF) // diff (x(2x+2)-2, 0, x)
+    {
+     if (parenthesis_count == 0 && comma_count == 2)
+      {
+       v_stack[v_sp].tag = tvDIFF;
+      }
+     else
+      {
+       if (parenthesis_count)
+        error ("unmatched parenthesis in diff");
+       else
+        error ("wrong number of arguments in diff");
+       return toERROR;
+      }
+    }
+    {
+     char *sval = strdup (sbuf);
+     if (!sval)
+      {
+       error ("memory allocation failed");
+       return toERROR;
+      }
+     registerString (sval);
+
+     pos                  = ipos - buf - 1;
+     v_stack[v_sp].sval   = sval;
+     v_stack[v_sp].var    = sym;
+     v_stack[v_sp].pos    = pos;
+     v_stack[v_sp].fval   = qnan;
+     v_stack[v_sp].imval  = 0;
+     v_stack[v_sp++].ival = 0;
+     return toOPERAND;
+    }
+  }
+ return toERROR;
+}
+
+
+// parse the next operator from the input buffer, returning the operator type
 t_operator calculator::scan (bool operand, bool percent)
 {
  char name[max_expression_length], *np;
 
- while (isspace (buf[pos] & 0x7f)) pos += 1;
+ while (isspace (buf[pos] & 0x7f)) pos += 1; // skip whitespace
  switch (buf[pos++])
   {
   case '\0': 
@@ -2367,11 +2993,20 @@ t_operator calculator::scan (bool operand, bool percent)
      error ("stack overflow");
      return toERROR;
     }
+
+
    if (sym)
     {
+     if (sym->tag == tsVARIABLE) strcpy (lastvar, sym->name);
      v_stack[v_sp]       = sym->val;
      v_stack[v_sp].pos   = pos;
      v_stack[v_sp++].var = sym;
+     if (sym->tag == tsINTEGR) return toSOLVE;
+     else
+     if (sym->tag == tsDIFF) return toSOLVE;
+     else
+     if (sym->tag == tsSOLVE) return toSOLVE;
+     else
      return (sym->tag == tsVARIABLE || sym->tag == tsCONSTANT) ? toOPERAND : toFUNC;
     }
    else
@@ -2384,9 +3019,9 @@ t_operator calculator::scan (bool operand, bool percent)
 static int lpr[toTERMINALS] = {
  2,  0,  0,  0,              // BEGIN, OPERAND, ERROR, END,
  4,  4,                      // LPAR, RPAR
- 5,  98, 98, 98,             // FUNC, POSTINC, POSTDEC, FACT
+ 5,  5, 98, 98, 98,          // FUNC, SOLVE, POSTINC, POSTDEC, FACT
  98, 98, 98, 98, 98, 98,     // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
- 90,                         // POW,
+ 99,                         // POW,
  80, 80, 80, 80, 80,         // toPERCENT, MUL, DIV, MOD, PAR
  70, 70,                     // ADD, SUB,
  60, 60, 60,                 // ASL, ASR, LSR,
@@ -2406,9 +3041,9 @@ static int lpr[toTERMINALS] = {
 static int rpr[toTERMINALS] = {
  0,   0,  0,  1,              // BEGIN, OPERAND, ERROR, END,
  110, 3,                      // LPAR, RPAR
- 120, 99, 99, 99,             // FUNC, POSTINC, POSTDEC, FACT
+ 120, 120, 99, 99, 99,        // FUNC, SOLVE, POSTINC, POSTDEC, FACT
  99,  99, 99, 99, 99, 99,     // PREINC, PREDEC, PLUS, MINUS, NOT, COM,
- 95,                          // POW,
+ 100,                         // POW,
  80,  80, 80, 80, 80,         // toPERCENT, MUL, DIV, MOD, PAR
  70,  70,                     // ADD, SUB,
  60,  60, 60,                 // ASL, ASR, LSR,
@@ -2497,7 +3132,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
 
  if (deep > MAXSTK)
   {
-   error (pos, "Too deep recursion");
+   errorf (pos, "Too deep (%d) recursion.", deep);
    return qnan;
   }
 
@@ -2510,9 +3145,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
  memset (sres, 0, STRBUF); // Clear the string result buffer
  while (true)
   {
-  next_token:
-   int op_pos = pos;
+ next_token:
    t_operator oper;
+   int op_pos = pos;
+   
    if (has_saved_val)
     {
      v_stack[v_sp++] = saved_val;
@@ -2527,6 +3163,11 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
     {
      do
       {
+       if (o_sp > 1 && v_sp &&
+           o_stack[o_sp-1] == toLPAR && 
+           o_stack[o_sp-2] == toSOLVE) 
+        oper = sscan (v_stack[v_sp - 1].var);
+       else
        oper = scan (operand, percent);
       }
      while (oper == toCONTINUE); // Skip semicolons
@@ -2536,7 +3177,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
      result_fval = qnan;
      return qnan;
     }
-   //if (oper == toCONTINUE) goto next_token;
+   //if (oper == toSOLVE) operand = true;  
   loper:
    switch (oper)
     {
@@ -2555,14 +3196,15 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
     }
    if (!operand)
     {
-     if (!BINARY (oper) && oper != toEND && oper != toPOSTINC && oper != toPOSTDEC && oper != toRPAR
-         && oper != toFACT)
+     if (!BINARY (oper) && oper != toEND && 
+         oper != toPOSTINC && oper != toPOSTDEC && 
+         oper != toRPAR  && oper != toFACT)
       {
        if (scfg & IMUL)
         {
          // Implicit multiplication: cases like 2sin(x), 3(4+5), (1+2)(3+4)
          // Allow only if next token is: FUNC, LPAR, or OPERAND (not after scientific suffix)
-         if (oper == toFUNC || oper == toLPAR || oper == toOPERAND)
+         if (oper == toSOLVE || oper == toFUNC || oper == toLPAR || oper == toOPERAND)
           {
            saved_oper = oper;
            if (oper != toLPAR && v_sp > 0)
@@ -2594,7 +3236,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
     }
    else
     {
-     if (oper == toOPERAND)
+     if ((oper == toOPERAND))
       {
        operand = false;
        n_args += 1;
@@ -3192,7 +3834,8 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
            v_stack[v_sp - 2].tag  = tvFLOAT;
           }
          else if (((v_stack[v_sp - 2].tag == tvCOMPLEX) || (v_stack[v_sp - 1].tag == tvCOMPLEX))
-                  || ((v_stack[v_sp - 1].imval != 0.0) || (v_stack[v_sp - 2].imval != 0.0)))
+                  || ((v_stack[v_sp - 1].imval != 0.0) || (v_stack[v_sp - 2].imval != 0.0))
+                  || is_complex2 (&v_stack[v_sp - 2], &v_stack[v_sp - 1], vf_pow))
           {
            long double x1 = v_stack[v_sp - 2].get ();
            long double y1 = v_stack[v_sp - 2].imval; // x1 + i*y1
@@ -3952,6 +4595,12 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
        v_stack[v_sp - 1].var = nullptr;
        break;
 
+      case toSOLVE: // solve function without '('
+       error ("'(' expected");
+       result_fval = qnan;
+       return qnan;
+       break;
+
       case toRPAR: // )
        error ("mismatched ')'");
        result_fval = qnan;
@@ -3968,6 +4617,97 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
          error ("')' expected");
          result_fval = qnan;
          return qnan;
+        }
+
+       if (o_stack[o_sp - 1] == toSOLVE)
+        {
+         symbol *sym = v_stack[v_sp - n_args - 1].var;
+         if (sym)
+          {
+           switch (sym->tag)
+            {
+            case tsSOLVE: // float f(str equation)
+             {
+              if (n_args != 1)
+               {
+                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (v_stack[v_sp - 1].tag == tvSOLVE)
+               {
+                const char *equation   = v_stack[v_sp - 1].sval ? v_stack[v_sp - 1].sval : "";
+                float__t result        = Solve (equation);
+                v_stack[v_sp - 2].fval = result;
+                v_stack[v_sp - 2].imval = 0.0;
+                v_stack[v_sp - 2].ival  = (int_t)result;
+                v_stack[v_sp - 2].tag  = tvFLOAT;
+                v_sp -= 1;
+               }
+              else
+               {
+                error (v_stack[v_sp - 1].pos, "Expression expected");
+                result_fval = qnan;
+                return qnan;
+               }
+             }
+             break;
+            case tsINTEGR: // float f(str equation)
+             {
+              if (n_args != 1)
+               {
+                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (v_stack[v_sp - 1].tag == tvINTEGR)
+               {
+                const char *equation    = v_stack[v_sp - 1].sval ? v_stack[v_sp - 1].sval : "";
+                float__t result         = Integr (equation);
+                v_stack[v_sp - 2].fval  = result;
+                v_stack[v_sp - 2].imval = 0.0;
+                v_stack[v_sp - 2].ival  = (int_t)result;
+                v_stack[v_sp - 2].tag   = tvFLOAT;
+                v_sp -= 1;
+               }
+              else
+               {
+                error (v_stack[v_sp - 1].pos, "Expression expected");
+                result_fval = qnan;
+                return qnan;
+               }
+             }
+             break;
+            case tsDIFF: // float f(str equation)
+             {
+              if (n_args != 1)
+               {
+                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (v_stack[v_sp - 1].tag == tvDIFF)
+               {
+                const char *equation    = v_stack[v_sp - 1].sval ? v_stack[v_sp - 1].sval : "";
+                float__t result         = Diff (equation);
+                v_stack[v_sp - 2].fval  = result;
+                v_stack[v_sp - 2].imval = 0.0;
+                v_stack[v_sp - 2].ival  = (int_t)result;
+                v_stack[v_sp - 2].tag   = tvFLOAT;
+                v_sp -= 1;
+               }
+              else
+               {
+                error (v_stack[v_sp - 1].pos, "Expression expected");
+                result_fval = qnan;
+                return qnan;
+               }
+             }
+             break;
+            }
+           o_sp -= 1;
+           n_args = 1;
+          }
         }
 
        if (o_stack[o_sp - 1] == toFUNC)
@@ -4319,7 +5059,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                 calculator *pCalculator = new calculator (scfg, hash_table, MASK_DEFAULT, deep);
                 if (!pCalculator)
                  {
-                  error ("Out of memory");
+                  errorf (pos, "Out of memory");
                   result_fval = qnan;
                   return qnan;
                  }
@@ -4328,7 +5068,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                 const char *p = strchr (funcdef, '(');
                 if (!p)
                  {
-                  error ("No '(' in function definition");
+                  errorf (pos, "No '(' in function definition");
                   delete pCalculator;
                   result_fval = qnan;
                   return qnan;
@@ -4352,7 +5092,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                   vbuf[vi] = 0;
                   if (vi == 0)
                    {
-                    error ("Empty parameter name");
+                    errorf (v_stack[v_sp - n_args + arg_idx].pos, "Empty parameter name");
                     delete pCalculator;
                     result_fval = qnan;
                     return qnan;
@@ -4360,14 +5100,15 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                   // Add variable
                   if (arg_idx >= n_args)
                    {
-                    error ("Too many parameters in function definition");
+                    errorf (v_stack[v_sp - n_args + arg_idx].pos, 
+                        "Too many parameters in function definition");
                     delete pCalculator;
                     result_fval = qnan;
                     return qnan;
                    }
                   if (((v_stack[v_sp - n_args + arg_idx].tag == tvERR)))
                    {
-                    error (v_stack[v_sp - n_args + arg_idx].pos, "Undefined operand");
+                    errorf (v_stack[v_sp - n_args + arg_idx].pos, "Undefined operand");
                     delete pCalculator;
                     result_fval = qnan;
                     return qnan;
@@ -4388,7 +5129,8 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                    }
                   else
                    {
-                    error ("Invalid character in parameter list");
+                    errorf (v_stack[v_sp - n_args + arg_idx].pos, 
+                            "Invalid character in parameter list");
                     delete pCalculator;
                     result_fval = qnan;
                     return qnan;
@@ -4396,7 +5138,7 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                  }
                 if (*p != ')')
                  {
-                  error ("No closing ')' in function definition");
+                  errorf (v_stack[v_sp - n_args + arg_idx].pos, "No closing ')' in function definition");
                   delete pCalculator;
                   result_fval = qnan;
                   return qnan;

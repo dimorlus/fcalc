@@ -16,7 +16,7 @@
 #include "sfmts.h"
 #include "sfunc.h"
 
-#define M_PI_2l 1.5707963267948966192313216916398
+#define M_PI_2l 1.5707963267948966192313216916398L
 #define nullptr NULL
 
 #else
@@ -40,9 +40,9 @@
 #pragma warning(disable : 4996)
 #pragma warning(disable : 4244)
 
-#define M_PI    3.1415926535897932384626433832795
-#define M_PI_2l 1.5707963267948966192313216916398
-#define M_E     2.7182818284590452353602874713527
+#define M_PI    3.1415926535897932384626433832795L
+#define M_PI_2l 1.5707963267948966192313216916398L
+#define M_E     2.7182818284590452353602874713527L
 #endif
 
 int_t To_int (int_t val)
@@ -1091,7 +1091,7 @@ int_t fprn (char *dest, char *sfmt, int args, value *v_stack)
        continue;
       }
     }
-   while (c && (i < STRBUF));
+   while (c && (i < STRBUF-2));
    if (!c) sfmt--; // poit to '\0' ???
    if (n < args)
     {
@@ -1776,12 +1776,14 @@ void LnC (float__t x, float__t y, float__t &re, float__t &im)
 #endif
 }
 
+
 // Square root of a complex number: sqrt(z) = sqrt(r) * [cos(phi/2) + i*sin(phi/2)]
 void SqrtC (float__t x, float__t y, float__t &re, float__t &im)
 {
 #ifdef _long_double_
  long double r   = hypotl (x, y);
- long double phi = atan2l (y, x);
+ //long double phi = atan2l (y, x);
+ long double phi = (y == 0.0 && x < 0.0) ? 3.14159265358979323846L : atan2l (y, x);
  r               = sqrtl (r);
  re              = r * cosl (phi / 2);
  im              = r * sinl (phi / 2);
@@ -1951,13 +1953,41 @@ void LognC (float__t x, float__t y, float__t u, float__t v, float__t &re, float_
  im = (ln_num_im * ln_den_re - ln_num_re * ln_den_im) / denom;
 }
 
+bool is_complex2 (value *arg1, value *arg2, int idx)
+{
+ if (((arg1->tag == tvCOMPLEX) 
+     || (arg2->tag == tvCOMPLEX)) 
+     || ((arg1->imval != 0.0) 
+     || (arg2->imval != 0.0))) return true;
+ switch (idx)
+  {
+  case vf_pow:
+  case vf_rootn:
+   {
+    if (arg2->fval == (float__t)arg2->ival)
+     return false; // If the exponent is an integer, we can use real exponentiation for real bases
+    if (arg1->fval >= 0.0)
+     return false; // if the base is non-negative, we can use real exponentiation for real bases
+    return true;   // Otherwise, we need complex exponentiation
+   }
+   break;
+   case vf_logn:
+   {
+    if (arg1->fval > 0.0) return false; // For positive values — regular log
+    return true;                       // For negative values and ZERO — complex log
+                                       // (although log(0) will throw an error in both cases)
+   }
+   break;
+  }
+ return false;
+}
+
 // This function performs various vectorized operations on complex numbers based on the index
 // provided.
 void vfunc2 (value *res, value *arg1, value *arg2, int idx)
 {
  if (res == nullptr || arg1 == nullptr || arg2 == nullptr) return;
- if (((arg1->tag == tvCOMPLEX) || (arg2->tag == tvCOMPLEX) || (res->tag == tvCOMPLEX))
-     || ((arg1->imval != 0.0) || (arg2->imval != 0.0) || (res->imval != 0.0)))
+ if (is_complex2 (arg1, arg2, idx) || (res->tag == tvCOMPLEX) || (res->imval != 0.0))
   {
    float__t out_re = 0.0;
    float__t out_im = 0.0;
@@ -1988,6 +2018,13 @@ void vfunc2 (value *res, value *arg1, value *arg2, int idx)
       out_im = re2;
      }
      break;
+    case vf_polar:
+     {
+      out_re = re1*cos(re2);
+      out_im = re1*sin(re2);
+     }
+     break;
+
     }
    res->fval  = out_re;
    res->imval = out_im;
@@ -2021,6 +2058,16 @@ void vfunc2 (value *res, value *arg1, value *arg2, int idx)
       res->ival  = (int64_t)res->fval;
       return;
      }
+    case vf_polar:
+     {
+
+      res->fval  = arg1->get () * cos(arg2->get ());
+      res->imval = arg1->get () * sin (arg2->get ());
+      res->tag   = tvCOMPLEX;
+      res->ival  = (int64_t)res->fval;
+      return;
+     }
+
     }
    res->imval = 0;
    res->tag   = tvFLOAT;
@@ -2028,12 +2075,42 @@ void vfunc2 (value *res, value *arg1, value *arg2, int idx)
   }
 }
 
+bool is_complex1 (value *arg, int idx)
+{
+ if (((arg->tag == tvCOMPLEX) || (arg->imval != 0.0))) return true;
+ switch (idx)
+  {
+  case vf_sqrt:
+   {
+    if (arg->fval >= 0.0) return false; // If the input is non-negative, we can use real square root
+    return true;                        // Otherwise, we need complex square root
+   }
+   break;
+  case vf_acos:
+  case vf_asin:
+   {
+    if (fabs (arg->fval) <= 1.0) return false;
+    return true;
+   }
+   break;
+  case vf_log:
+   {
+    if (arg->fval > 0.0) return false; // For positive values — regular log
+    return true;                       // For negative values and ZERO — complex log
+                                       // (although log(0) will throw an error in both cases)
+   }
+   break;
+  }
+  return false;
+}
+
 // This function performs various vectorized operations on complex numbers based on the index
 void vfunc (value *res, value *arg, int idx)
 {
  if (res == nullptr || arg == nullptr) return;
- if (((arg->tag == tvCOMPLEX) || (res->tag == tvCOMPLEX))
-     || ((arg->imval != 0.0) || (res->imval != 0.0)))
+ if ((res->tag == tvCOMPLEX)
+     || (res->imval != 0.0)
+     || is_complex1 (arg, idx))
   {
    float__t out_re = 0.0;
    float__t out_im = 0.0;
