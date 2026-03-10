@@ -285,8 +285,11 @@ void __fastcall TCalcForm::CBStrKeyPress(TObject *Sender, char &Key)
   }
  else
    {
+    char mstr[256];
     AddHist();
-    CBStr->Text = asprintf("%.16Lg", fVal);
+    //CBStr->Text = asprintf("%.16Lg", fVal);
+    ccalc->printres(mstr);
+    CBStr->Text = mstr;
     CBStr->SelLength = CBStr->Text.Length();
    }
   }
