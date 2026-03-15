@@ -19,6 +19,7 @@
 #define M_PI_2l 1.5707963267948966192313216916398L
 #define nullptr NULL
 #pragma warn -8066
+
 #else
 #include <cstdint>
 #include <ctime>
@@ -72,6 +73,39 @@ int_t Prime (int_t n)
     }
    n += 2;
   }
+}
+
+// int -> float (reinterpret bits)
+float__t floatf (uint64_t i) // float: берём младшие 32 бита
+{
+ uint32_t ii = (uint32_t)(0xffffffff & i); // truncate to 32
+ float f;
+ memcpy (&f, &ii, 4);
+ return (float__t)f;
+}
+
+float__t floatd (uint64_t i) // double / long double (64 бит)
+{
+ double d;
+ memcpy (&d, &i, 8);
+ return (float__t)d;
+}
+
+// float -> int (reinterpret bits)
+uint64_t binf (float__t x) // float -> 32-bit int
+{
+ float f = (float)x;
+ uint32_t i;
+ memcpy (&i, &f, 4);
+ return (uint64_t)i;
+}
+
+uint64_t bindbl (float__t x) // double -> 64-bit int
+{
+ double d = (double)x;
+ uint64_t i;
+ memcpy (&i, &d, 8);
+ return (int64_t)i; // signed, for proper display
 }
 
 // Convert integer to binary string with spaces every 8 bits

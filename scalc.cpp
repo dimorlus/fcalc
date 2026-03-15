@@ -50,6 +50,7 @@
 #pragma warn -8060
 #pragma warn -8066
 #pragma warn -8070
+#pragma warn -8027
 
 #include <float.h>
 int isinf_f(float x) { return x < -FLT_MAX || x > FLT_MAX; }
@@ -94,6 +95,9 @@ void DebugLog (const char *format, ...)
 #endif // _ENABLE_DEBUG_LOG_
 
 
+
+
+
 calculator::calculator (int cfg, symbol **symtab, int copyMask, int deep)
 {
  this->deep  = deep + 1; // Set the current stack depth (incremented by 1 to account for the new instance)
@@ -114,6 +118,7 @@ calculator::calculator (int cfg, symbol **symtab, int copyMask, int deep)
  tmp_var_count = 0;
  err[0]        = '\0';
  scfg          = cfg;
+ fflags        = 0;
  sres[0]       = '\0';
  memset (v_stack, 0, sizeof v_stack);
 
@@ -326,6 +331,12 @@ void calculator::AddPredefined (void)
  add (tsIFUNCF1, "trgb", (void *)temperature_to_rgb);
  add (tsSFUNCF1, "winf", (void *)wavelength_info);
 
+ add (tsIFUNCF1, "binf", (void *)binf);
+ add (tsIFUNCF1, "bind", (void *)bindbl);
+
+ add (tsFFUNCI1, "floatf", (void *)floatf);
+ add (tsFFUNCI1, "floatd", (void *)floatd);
+
  // Mathematical constants
  addfconst ("pi", M_PI);
  addfconst ("e", M_E);
@@ -485,6 +496,9 @@ void calculator::AddPredefined (void)
  addlvar ("maxlong", 9223372036854775807.0L, 0x7fffffffffffffffull);
  addlvar ("maxu64", 18446744073709551615.0L, 0xffffffffffffffffull);
  addlvar ("maxulong", 18446744073709551615.0L, 0xffffffffffffffffull);
+
+ addlvar ("float_sz", sizeof (float__t), sizeof (float__t));
+ addlvar ("int_sz", sizeof (int_t), sizeof (int_t));
 
  // System
  //  Get system timezone information
@@ -800,20 +814,360 @@ int calculator::mxprint (int8_t res_rows, int8_t res_cols, float__t *res_mval,
  return n;
 }
 
-// Print the result string to the input
-int calculator::printres(char* str)
+#define OPTS sizeof (all_options) / sizeof (option_def)
+int32_t scan_opt (char *str, int &opts)
 {
+ struct option_def
+ {
+  char name[4]; // Option name
+  int flag;           // Bit mask
+ };
+
+ // All supported options definitions
+ static const option_def all_options[] = {
+  { "DEG", DEG },  { "ENG", ENG }, { "STR", STR }, { "HEX", HEX }, { "OCT", OCT },
+  { "BIN", FBIN }, { "DAT", DAT }, { "CHR", CHR }, { "WCH", WCH }, { "CMP", CMP },
+  { "NRM", NRM },  { "IGR", IGR }, { "UNS", UNS }, { "FRC", FRC }, { "FRI", FRI },
+  { "FRH", FRH },  { "FLT", FLT }, { "UTM", UTM },
+  { "ALL", DEG + ENG + STR + HEX + OCT + FBIN + DAT + CHR + WCH + CMP + NRM + IGR
+         + UNS + FRC + FRI + FRH + UTM + FLT },
+  { ""   , 0 } // Sentinel
+ };
+ int i, j, k, l;
+ char c, cc;
+
+ l = 0;
+ while (str[l])
+  {
+   // Skip whitespace
+   while (str[l] && (str[l] == ' ' || str[l] == '\t' || str[l] == '\r' || str[l] == '\n')) l++;
+
+   if (!str[l]) break;
+   // Search for an option
+   if (str[l] != '/')
+    {
+     l++;
+     continue;
+    }
+
+   l++; // Skip '/'
+   // Search for a matching option
+   bool found = false;
+   for (i = 0; i < OPTS - 1; i++) // -1 to avoid checking NULL sentinel
+    {
+     j = l;
+     k = 0;
+
+     // Compare option name
+     while (all_options[i].name[k])
+      {
+       c = str[j];
+       if (c >= 'a' && c <= 'z') c -= ('a' - 'A'); // To upper
+       cc = all_options[i].name[k];
+
+       if (c != cc) break;
+
+       j++;
+       k++;
+      }
+
+     // Check if the name matched completely
+     if (all_options[i].name[k] == '\0')
+      {
+       c = str[j];
+       if (c == '+' || c == '-')
+        {
+         // Found the option!
+         if (c == '+')
+          opts |= all_options[i].flag;
+         else
+          opts &= ~all_options[i].flag;
+
+         l     = j + 1;
+         found = true;
+         break;
+        }
+      }
+    }
+  }
+
+ return opts;
+}
+
+
+// Print the result string to the input
+int calculator::printres(char* str, int options, int binwide)
+{
+ if (isnan (result_fval) || err[0])
+  {
+   return sprintf (str, "%s", err[0] ? err : "NaN");
+  }
  if (result_tag == tvMATRIX)
   {
     return mxprint (str, false);
   }
  else
   {
-   if (result_imval == 0)
-    return sprintf (str, "%.16Lg", result_fval);
-   else
-    return sprintf (str, "%.16Lg%+.16Lg%c", result_fval, result_imval, c_imaginary);
+   if (options & AUTO)
+    {
+     if (sres[0])
+      return sprintf (str, "%s", sres);
+     else
+      {
+/*
+  { "DEG", DEG },  { "ENG", ENG }, { "STR", STR }, { "HEX", HEX }, { "OCT", OCT },
+  { "BIN", FBIN }, { "DAT", DAT }, { "CHR", CHR }, { "WCH", WCH }, { "CMP", CMP },
+  { "NRM", NRM },  { "IGR", IGR }, { "UNS", UNS }, { "FRC", FRC }, { "FRI", FRI },
+  { "FRH", FRH },  { "FLT", FLT }, { "UTM", UTM }, { ""   , 0 } // Sentinel
+*/
+       if (fflags & DEG) return printres (str, DEG, binwide);
+       if (fflags & FLT) return printres (str, FFLOAT, binwide);
+       if (fflags & ENG) return printres (str, SCI, binwide);
+       if (fflags & NRM) return printres (str, NRM, binwide);
+       if (fflags & FRH) return printres (str, FRH, binwide);
+       if (fflags & CMP) return printres (str, CMP, binwide);
+       if (fflags & DAT) return printres (str, DAT, binwide);
+       if (fflags & IGR) return printres (str, IGR, binwide);
+       if (fflags & UNS) return printres (str, UNS, binwide);
+       if (fflags & FRC) return printres (str, FRC, binwide);
+       if (fflags & FRI) return printres (str, FRI, binwide);
+       if (fflags & UTM) return printres (str, UTM, binwide);
+       if (fflags & CHR) return printres (str, CHR, binwide);
+       if (fflags & WCH) return printres (str, WCH, binwide);
+
+       if ((fflags & HEX) && ((float__t)result_ival == result_fval))
+        return printres (str, HEX, binwide);
+       if ((fflags & OCT) && ((float__t)result_ival == result_fval)) return printres (str, OCT, binwide);
+       if ((fflags & fBIN) && ((float__t)result_ival == result_fval)) return printres (str, fBIN, binwide);
+       if ((float__t)result_ival == result_fval) return printres (str, IGR, binwide);
+       if (fflags & STR) return printres (str, STR, binwide);
+
+       if (result_imval == 0)
+        return sprintf (str, "%.16Lg", result_fval);
+       else
+        return sprintf (str, "%.16Lg%+.16Lg%c", result_fval, result_imval, c_imaginary);
+      }
+    }
+
+   if (options & (FFLOAT|FLT))
+    {
+     if (result_imval == 0)
+      return sprintf (str, "%.16Lg", result_fval);
+     else
+      return sprintf (str, "%.16Lg%+.16Lg%c", result_fval, result_imval, c_imaginary);
+    }
+
+   if (options & SCI)
+    {
+     char scistr[80];
+     if (result_imval == 0)
+      d2scistr (scistr, result_fval);
+     else
+      {
+       char cphi[20];
+       char cr[20];
+       char *cp       = scistr;
+       float__t imval = result_imval;
+       float__t fval  = result_fval;
+       float__t phi   = atan2l (imval, fval);
+       float__t r     = hypotl (fval, imval);
+       d2scistr (cr, r);
+       dgr2str (cphi, phi);
+       cp += sprintf (cp, "|%s|(%s) ", cr, cphi);
+       normz (fval, imval);
+       cp += d2scistr (cp, fval);
+       if (imval >= 0) *cp++ = '+';
+       cp += d2scistr (cp, imval);
+       *cp++ = c_imaginary;
+       *cp   = '\0';
+      }
+     return sprintf (str, "%s", scistr);
+    }
+
+   if (options & NRM)
+    {
+     char nrmstr[80];
+     float__t imval = result_imval;
+     float__t fval  = result_fval;
+     normz (fval, imval);
+     if (imval == 0) d2nrmstr (nrmstr, fval);
+     else
+      {
+       char cphi[20];
+       char cr[20];
+       float__t phi = atan2l (imval, fval);
+       float__t r   = hypotl (fval, imval);
+       d2nrmstr (cr, r);
+       dgr2str (cphi, phi);
+       sprintf (nrmstr, "|%s|(%s) %.16Lg%+.16Lg%c", cr, cphi, fval, imval, c_imaginary);
+      }
+     return sprintf (str, "%s", nrmstr);
+    }
+
+   if (options & CMP)
+    {
+     char bscistr[80];
+     b2scistr (bscistr, result_fval);
+     return sprintf (str, "%s", bscistr);
+    }
+   if (options & IGR)
+    {
+     return sprintf (str, "%lld", result_ival);
+    }
+   if (options & UNS)
+    {
+     return sprintf (str, "%llu", result_ival); //%llu|%zu
+    }
+   if (options & FRC)
+    {
+     char frcstr[80];
+     int num, denum;
+     double val;
+     if (result_fval > 0)
+      val = result_fval;
+     else
+      val = -result_fval;
+     double intpart = floor (val);
+     if (intpart < 1e15)
+      {
+       if (intpart > 0)
+        {
+         fraction (val - intpart, 0.001, num, denum);
+         if (result_fval > 0)
+          sprintf (frcstr, "%.0f+%d/%d", intpart, num, denum);
+         else
+          sprintf (frcstr, "-%.0f-%d/%d", intpart, num, denum);
+        }
+       else
+        {
+         fraction (val, 0.001, num, denum);
+         if (result_fval > 0)
+          sprintf (frcstr, "%d/%d", num, denum);
+         else
+          sprintf (frcstr, "-%d/%d", num, denum);
+        }
+       if (denum)
+        {
+         return sprintf (str, "%s", frcstr);
+        }
+      }
+    }
+
+   if (options & FRI)
+    {
+     char frcstr[80];
+     int num, denum;
+     double val;
+     if (result_fval > 0)
+      val = result_fval;
+     else
+      val = -result_fval;
+     val /= 25.4e-3;
+     double intpart = floor (val);
+     if (intpart < 1e15)
+      {
+       if (intpart > 0)
+        {
+         fraction (val - intpart, 0.001, num, denum);
+         if (num && denum)
+          {
+           if (result_fval > 0)
+            sprintf (frcstr, "%.0f+%d/%d", intpart, num, denum);
+           else
+            sprintf (frcstr, "-%.0f-%d/%d", intpart, num, denum);
+          }
+         else
+          {
+           sprintf (frcstr, "%.0f", intpart);
+          }
+        }
+       else
+        {
+         fraction (val, 0.001, num, denum);
+         if (result_fval > 0)
+          sprintf (frcstr, "%d/%d", num, denum);
+         else
+          sprintf (frcstr, "-%d/%d", num, denum);
+        }
+       return sprintf (str, "%s", frcstr);
+      }
+    }
+
+   if (options & HEX)
+    {
+     char binfstr[16];
+     sprintf (binfstr, "0x%%0.%illx", binwide / 4);
+     return sprintf (str, binfstr, result_ival);
+    }
+
+   if (options & OCT)
+    {
+     char binfstr[16];
+     sprintf (binfstr, "0o%%0.%illo", binwide / 3);
+     return sprintf (str, binfstr, result_ival);
+    }
+
+   if (options & fBIN)
+    {
+     char binfstr[16];
+     char binstr[80];
+     sprintf (binfstr, "%%%ib", binwide);
+     b2str (binstr, binfstr, result_ival);
+     return sprintf (str, "%s", binstr);
+    }
+
+   if (options & CHR)
+    {
+     char chrstr[10];
+     chr2str (chrstr, result_ival);
+     return sprintf (str, "%s", chrstr);
+    }
+
+   if (options & WCH)
+    {
+     char wchrstr[10];
+     int i = result_ival & 0xffff;
+     wchr2str (wchrstr, i);
+     return sprintf (str, "%s", wchrstr);
+    }
+
+   if (options & DAT)
+    {
+     char dtstr[80];
+     t2str (dtstr, result_ival);
+     return sprintf (str, "%s", dtstr);
+    }
+
+   if (options & UTM)
+    {
+     char dtstr[80];
+     nx_time2str (dtstr, result_ival);
+     return sprintf (str, "%s", dtstr);
+    }
+
+   if (options & DEG)
+    {
+     char dgrstr[80];
+     char *cp = dgrstr;
+     cp += sprintf (cp, "%.6Lg rad|", (long double)result_fval);
+     cp += dgr2str (cp, result_fval);
+     cp += sprintf (cp, " (%.6Lg`)", (long double)result_fval * 180.0 / M_PI);
+     cp += sprintf (cp, "|%.4Lg gon", (long double)result_fval * 200.0 / M_PI);
+     cp += sprintf (cp, "|%.4Lg turn", (long double)result_fval * 0.5 / M_PI);
+     return sprintf (str, "%s", dgrstr);
+    }
+
+   if ((options & FRH) && (result_fval > -273.15))
+    {
+     char frhstr[80];
+     sprintf (frhstr, "%.6Lg K|%.6Lg `C|%.6Lg `F", (long double)(result_fval + 273.15),
+              (long double)result_fval, (long double)(result_fval * 9.0 / 5.0 + 32.0));
+     return sprintf (str, "%s", frhstr); 
+    }
+
+   if (options & STR) return sprintf (str, "'%s'", sres);
   }
+ return sprintf (str, "%s", "");
 }
 
 // Print the result of the calculation into the provided string buffer with formatting options
@@ -866,7 +1220,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
      n++;
 
      // (RO) String format found
-     if (((Options & STR) || (scfg & STR)) && (result_imval == 0))
+     if (((Options & STR) || (fflags & STR)) && (result_imval == 0))
       {
         {
          if (sres[0])
@@ -899,7 +1253,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     {
      if (result_imval == 0)
       {
-       bsize += sprintf (str + bsize, "%65.16Lg f\r\n", (long double)result_fval);
+       bsize += sprintf (str + bsize, "%65.24Lg f\r\n", (long double)result_fval);
        n++;
       }
      else
@@ -916,7 +1270,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
       }
     }
    // (RO) Scientific (6.8k) format found
-   if (Options & (SCI | ENG))
+   if ((Options & SCI) || (fflags & ENG))
     {
      char scistr[80];
      if (result_imval == 0)
@@ -978,7 +1332,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Computing format found
-   if (((Options & CMP) || (scfg & CMP)) && (result_imval == 0))
+   if (((Options & CMP) || (fflags & CMP)) && (result_imval == 0))
     {
      char bscistr[80];
      b2scistr (bscistr, result_fval);
@@ -1080,7 +1434,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Hex format found
-   if (((Options & HEX) || (scfg & HEX)) && (result_imval == 0))
+   if (((Options & HEX) || (fflags & HEX)) && (result_imval == 0))
     {
      char binfstr[16];
      sprintf (binfstr, "%%64.%illxh  \r\n", binwide / 4);
@@ -1091,7 +1445,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Octal format found
-   if (((Options & OCT) || (scfg & OCT)) && (result_imval == 0))
+   if (((Options & OCT) || (fflags & OCT)) && (result_imval == 0))
     {
      char binfstr[16];
      sprintf (binfstr, "%%64.%illoo  \r\n", binwide / 3);
@@ -1102,7 +1456,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Binary format found
-   if (((Options & fBIN) || (scfg & fBIN)) && (result_imval == 0))
+   if (((Options & fBIN) || (fflags & fBIN)) && (result_imval == 0))
     {
      char binfstr[16];
      char binstr[80];
@@ -1115,7 +1469,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Char format found
-   if (((Options & CHR) || (scfg & CHR)) && (result_imval == 0))
+   if (((Options & CHR) || (fflags & CHR)) && (result_imval == 0))
     {
      char chrstr[80];
      chr2str (chrstr, result_ival);
@@ -1126,7 +1480,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) WChar format found
-   if (((Options & WCH) || (scfg & WCH)) && (result_imval == 0))
+   if (((Options & WCH) || (fflags & WCH)) && (result_imval == 0))
     {
      char wchrstr[80];
      int i = result_ival & 0xffff;
@@ -1138,7 +1492,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Date time format found
-   if (((Options & DAT) || (scfg & DAT)) && (result_imval == 0))
+   if (((Options & DAT) || (fflags & DAT)) && (result_imval == 0))
     {
      char dtstr[80];
      t2str (dtstr, result_ival);
@@ -1149,7 +1503,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Unix time
-   if (((Options & UTM) || (scfg & UTM)) && (result_imval == 0))
+   if (((Options & UTM) || (fflags & UTM)) && (result_imval == 0))
     {
      char dtstr[80];
      nx_time2str (dtstr, result_ival);
@@ -1160,7 +1514,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (RO) Degrees format found  * 180.0 / M_PI
-   if (((Options & DEG) || (scfg & DEG)) && (result_imval == 0) && (result_tag == tvFLOAT))
+   if (((Options & DEG) || (fflags & DEG)) && (result_imval == 0) && (result_tag == tvFLOAT))
     {
      char dgrstr[80];
      char *cp = dgrstr;
@@ -1175,7 +1529,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
     }
 
    // (UI) Temperature format
-   if (((Options & FRH) || (scfg & FRH)) && (result_imval == 0) && 
+   if (((Options & FRH) || (fflags & FRH)) && (result_imval == 0) && 
        (result_fval > -273.15) && (result_tag == tvFLOAT))
     {
      char frhstr[80];
@@ -1188,7 +1542,7 @@ int calculator::print (char *str, int Options, int binwide, int *size)
 
 
    // (RO) String format found
-   if (((Options & STR) || (scfg & STR)) && (result_imval == 0))
+   if (((Options & STR) || (fflags & STR)) && (result_imval == 0))
     {
       {
        if (sres[0])
@@ -1541,7 +1895,10 @@ int calculator::hscanf (char *str, int_t &ival, int &nn)
   }
  ival = res;
  nn   = n;
- if (n) scfg |= HEX;
+ if (n)
+  {
+   fflags |= HEX;
+  }
  return 0;
 }
 
@@ -1565,7 +1922,10 @@ int calculator::bscanf (char *str, int_t &ival, int &nn)
   }
  ival = res;
  nn   = n;
- if (n) scfg |= fBIN;
+ if (n) 
+  {
+   fflags |= fBIN;
+  }
  return 0;
 }
 
@@ -1589,7 +1949,10 @@ int calculator::oscanf (char *str, int_t &ival, int &nn)
   }
  ival = res;
  nn   = n;
- if (n) scfg |= OCT;
+ if (n) 
+  {
+   fflags |= OCT;
+  }
  return 0;
 }
 
@@ -1636,7 +1999,10 @@ int calculator::xscanf (char *str, int len, int_t &ival, int &nn)
        break;
      }
     if (res >= max) n--;
-    if (n) scfg |= OCT;
+    if (n)
+     {
+      fflags |= OCT;
+     }
    }
    break;
 
@@ -1665,62 +2031,65 @@ int calculator::xscanf (char *str, int len, int_t &ival, int &nn)
       break;
     }
    if (res >= max) n--;
-   if (n) scfg |= HEX;
+   if (n) 
+    {
+     fflags |= HEX;
+    }
    break;
 
   case 'a':
    res = '\007';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'f':
    res = 255u;
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'v':
    res = '\x0b';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'E':
   case 'e':
    res = '\033';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 't':
    res = '\t';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'n':
    res = '\n';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'r':
    res = '\r';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case 'b':
    res = '\b';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
 
   case '\\':
    res = '\\';
    n   = 1;
-   scfg |= ESC;
+   fflags |= ESC;
    break;
   }
  ival = res;
@@ -1746,7 +2115,7 @@ float__t calculator::dstrtod (char *s, char **endptr)
       {
        res += d * mdeg[i];
        end++;
-       scfg |= DEG;
+       fflags |= DEG;
        break;
       }
      else
@@ -1784,7 +2153,7 @@ float__t calculator::tstrtod (char *s, char **endptr)
       {
        res += d * dms[i];
        end += 2;
-       scfg |= DAT;
+       fflags |= DAT;
        break;
       }
      else
@@ -1809,10 +2178,11 @@ void calculator::engineering (float__t mul, char *&fpos, float__t &fval)
    div *= 10;
    fract *= 10;
    fract += *fpos++ - '0';
-   scfg |= ENG;
+   fflags |= ENG;
   }
  fval *= mul;
  fval += (fract * mul) / div;
+ fflags |= ENG;
 }
 
 // Check if the next characters are "B" or "iB" for computing format, and set the CMP flag if found
@@ -1821,14 +2191,14 @@ bool calculator::isCMP (char *&fpos)
  if (*fpos == 'B')
   {
    fpos++;
-   scfg |= CMP;
+   fflags |= CMP;
    return true;
   }
  else
  if ((*fpos == 'i') && (*(fpos + 1) == 'B'))
   {
    fpos += 2;
-   scfg |= CMP;
+   fflags |= CMP;
    return true;
   }
  return false;
@@ -1846,6 +2216,7 @@ void calculator::scientific (char *&fpos, float__t &fval)
      fpos++;
      // fval *= 25.4e-3;
      engineering (25.4e-3, fpos, fval);
+     fflags |= FRI;
     }
    break;
   case 'Q':
@@ -1898,9 +2269,17 @@ void calculator::scientific (char *&fpos, float__t &fval)
    else engineering (1e6, fpos, fval);
    break;
   case 'K':
+#ifdef _KELVIN_
+   fpos++;
+   if (isCMP (fpos))  fval *= 1024; // 2**10
+   else 
+   if ((scfg & FRH) == 0) engineering (1e3, fpos, fval);
+   else fpos--;
+#else
    fpos++;
    if (isCMP (fpos)) fval *= 1024; // 2**10
    else engineering (1e3, fpos, fval);
+#endif //_KELVIN_
    break;
   //case 'R':
   // fpos++;
@@ -2156,6 +2535,7 @@ float__t calculator::Solve (const char *expr, t_symbol tag)
     vvar = fx;
    }
 
+   fflags |= pCalculator->isfflags ();
    delete pCalculator;
    return vvar;
   }
@@ -2456,6 +2836,7 @@ float__t calculator::Integr (const char *expr, t_symbol tag)
      errorf (pos, "Unknown tag");
      result = qnan;
     }
+   fflags |= pCalculator->isfflags ();
    delete pCalculator;
    return result;
   }
@@ -2540,6 +2921,7 @@ float__t calculator::Diff (const char *expr)
 
      float__t fp = (fxp - fxm) / (2.0L * delta);
 
+     fflags |= pCalculator->isfflags ();
      delete pCalculator;
      return fp;
     }
@@ -2792,6 +3174,7 @@ t_operator calculator::sqbraces (void)
     }
   }
 
+ fflags |= child->isfflags ();
  delete child; // done with child calculator
 
  if (*ipos != ']')
@@ -2980,7 +3363,11 @@ t_operator calculator::dqscan (char qc)
 
  if (*ipos == qc)
   {
-   if (sbuf[0]) scfg |= STR;
+   //if (sbuf[0])
+   // {
+   //  scfg |= STR;
+   //  fflags |= STR;
+   // }
    v_stack[v_sp].tag  = tvSTR;
    v_stack[v_sp].ival = 0;
    v_stack[v_sp].sval = (char *)sf_alloc (sidx + 1);
@@ -3000,6 +3387,40 @@ t_operator calculator::dqscan (char qc)
   }
 }
 
+void calculator::isNRM(char* start, char* end)
+{
+ int ppos = 0; 
+ int epos = 0;
+ int len  = end - start;
+ // Check if the number is in normal (non-scientific) format
+ // by looking for 'e' or 'E' in the part of the string that was parsed as a number
+ for (char *p = start; p < end; p++)
+  {
+   if (*p == '.') ppos = p - start + 1;              // position of decimal point, if any
+   if (*p == 'e' || *p == 'E') epos = p - start + 1; // position of exponent, if any
+  }
+
+ if (ppos == 0 && epos == 0 && len <= 4) //1234
+   {
+    fflags |= NRM;
+    return;
+   }
+ if (ppos && epos == 0 && len <= 5) //123.4
+   {
+    fflags |= NRM;
+    return;
+   }
+  if (ppos && epos > 0 && epos <= 6) //123.4E3
+   {
+    fflags |= NRM;
+    return;
+   }
+  if (ppos == 0 && epos > 0 && epos <= 4) //123E3 
+   {
+    fflags |= NRM;
+    return;
+   }
+}
 
 // Scan a number in various formats: decimal, hex (0x or $), octal (0o), binary (0b), or with
 // backslash for base prefix
@@ -3016,31 +3437,31 @@ t_operator calculator::dscan (bool operand, bool percent)
    {
     ierr = xscanf (buf + pos, 1, ival, n);
     ipos = buf + pos + n;
-    scfg |= ESC;
+    fflags |= ESC;
    }
   else if ((buf[pos - 1] == '0') && ((buf[pos] == 'B') || (buf[pos] == 'b')))
    {
     ierr = bscanf (buf + pos + 1, ival, n);
     ipos = buf + pos + n + 1;
-    scfg |= fBIN;
+    fflags |= fBIN;
    }
   else if ((buf[pos - 1] == '0') && ((buf[pos] == 'O') || (buf[pos] == 'o')))
    {
     ierr = oscanf (buf + pos + 1, ival, n);
     ipos = buf + pos + n + 1;
-    scfg |= OCT;
+    fflags |= OCT;
    }
   else if (buf[pos - 1] == '$')
    {
     ierr = hscanf (buf + pos, ival, n);
     ipos = buf + pos + n;
-    scfg |= HEX;
+    fflags |= HEX;
    }
   else if ((buf[pos - 1] == '0') && ((buf[pos] == 'X') || (buf[pos] == 'x')))
    {
     ierr = hscanf (buf + pos + 1, ival, n);
     ipos = buf + pos + n + 1;
-    scfg |= HEX;
+    fflags |= HEX;
    }
   else
    {
@@ -3058,6 +3479,10 @@ t_operator calculator::dscan (bool operand, bool percent)
 #else
   sfval = fval = strtold (buf + pos - 1, &fpos);
 #endif
+
+  if (errno == 0 && (fpos > ipos)) 
+      isNRM (buf + pos - 1, fpos); //
+
   sfpos = fpos;
 
   v_stack[v_sp].tag = tvFLOAT;
@@ -3076,7 +3501,21 @@ t_operator calculator::dscan (bool operand, bool percent)
      fval = -(-fval - 32.0) * 5.0 / 9.0;
     else
      fval = (fval - 32.0) * 5.0 / 9.0;
+    fflags |= FRH;
    }
+#ifdef _KELVIN_
+  if ((scfg & FRH) && (*fpos == 'K')) // Kelvin to Celsius
+   {
+    fpos++;
+    if ((o_sp > 0) && (o_stack[o_sp - 1] == toMINUS)) //fval = qnan;
+    {
+     error ("Temperature below absolute zero");
+     return toERROR;
+    }
+    else  fval = fval - 273.15;
+    fflags |= FRH;
+   }
+#endif //_KELVIN_
   if (operand && percent && (*fpos == '%'))
    {
     fpos++;
@@ -3086,7 +3525,7 @@ t_operator calculator::dscan (bool operand, bool percent)
    {
     c_imaginary = *fpos;
     fpos++;
-    scfg |= CPX;
+    fflags |= CPX;
     v_stack[v_sp].tag = tvCOMPLEX;
    }
   if (*fpos && (isalnum (*fpos & 0x7f) || *fpos == '@' || *fpos == '_' || *fpos == '?'))
@@ -3137,6 +3576,7 @@ t_operator calculator::dscan (bool operand, bool percent)
      }
    }
   v_stack[v_sp].pos   = pos;
+  if (v_stack[v_sp].tag == tvFLOAT) fflags |= FLT;
   v_stack[v_sp++].var = nullptr;
   return toOPERAND;
  }
@@ -3192,6 +3632,7 @@ t_operator calculator::scan (bool operand, bool percent)
    if (buf[pos] == ';') // (RO) ;; operator (comment to end of line)
     {
      pos += 1;
+     scan_opt (&buf[pos], fflags);
      return toEND;
     } 
    return toSEMI;
@@ -3295,6 +3736,7 @@ t_operator calculator::scan (bool operand, bool percent)
    if (buf[pos] == '=') // (RO) == operator
     {
      scfg &= ~PAS;
+     fflags &= ~PAS;
      pos += 1;
      return toEQ;
     }
@@ -3306,6 +3748,7 @@ t_operator calculator::scan (bool operand, bool percent)
    if (buf[pos] == '=') // (RO) := operator
     {
      scfg |= PAS;
+     fflags |= PAS;
      pos += 1;
      return toSET;
     }
@@ -3426,13 +3869,13 @@ t_operator calculator::scan (bool operand, bool percent)
           MultiByteToWideChar (CP_OEMCP, 0, (LPSTR)cbuf, -1, (LPWSTR)wbuf, 2);
           ival = *(int *)&wbuf[0];
           ipos += 2;
-          scfg |= WCH;
+          fflags |= WCH;
          }
         else
 #endif /*_WIN_*/
 #endif /*_WCHAR_*/
          {
-          scfg |= CHR;
+          fflags |= CHR;
           ival               = *(unsigned char *)(ipos - 1);
           v_stack[v_sp].sval = (char *)sf_alloc (2);
           if (v_stack[v_sp].sval)
@@ -3491,7 +3934,7 @@ t_operator calculator::scan (bool operand, bool percent)
           MultiByteToWideChar (CP_OEMCP, 0, (LPSTR)cbuf, -1, (LPWSTR)wbuf, 2);
           ival = *(int *)&wbuf[0];
           ipos += 3;
-          scfg |= WCH;
+          fflags |= WCH;
          }
         else
          {
@@ -3541,6 +3984,7 @@ t_operator calculator::scan (bool operand, bool percent)
       c_imaginary         = buf[pos - 1];
       v_stack[v_sp].tag   = tvCOMPLEX;
       scfg |= CPX;
+      fflags |= CPX;
       v_stack[v_sp].imval = fval;
       v_stack[v_sp].fval  = 0;
       v_stack[v_sp].pos   = pos;
@@ -6657,6 +7101,36 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              v_sp -= 2;
              break;
 
+             case tsFFUNCI1: // float f(int x) (float() function)
+             if (n_args != 1)
+               {
+                error (v_stack[v_sp - n_args - 1].pos, "Function should take one argument");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (((v_stack[v_sp - 1].tag == tvERR)))
+               {
+                error (v_stack[v_sp - 1].pos, "Undefined operand");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (v_stack[v_sp - 1].tag == tvSTR)
+               {
+                error (v_stack[v_sp - 1].pos, "Illegal string operation");
+                result_fval = qnan;
+                return qnan;
+               }
+              if (v_stack[v_sp - 1].tag == tvMATRIX)
+               {
+                error (v_stack[v_sp - 1].pos, "Illegal matrix operation");
+                result_fval = qnan;
+                return qnan;
+               }
+              v_stack[v_sp - 2].fval = (*(float__t (*) (int_t))sym->func) (v_stack[v_sp - 1].ival);
+              v_stack[v_sp - 2].tag  = tvFLOAT;
+              v_sp -= 1;
+              break;
+
             case tsIFUNCF1: // int f(float x) (wrgb() function)
              if (n_args != 1)
               {
@@ -6717,7 +7191,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                   = (*(const char *(*)(float__t))sym->func) (v_stack[v_sp - 1].get ());
               strncpy (sres, resStr ? resStr : "", STRBUF - 1);
               sres[STRBUF - 1] = '\0';
-              if (sres[0]) scfg |= STR;
+              if (sres[0])
+               {
+                fflags |= STR;
+               }
               v_stack[v_sp - 2].sval = dupString(sres);
               v_stack[v_sp - 2].fval = v_stack[v_sp - 1].get ();
               v_stack[v_sp - 2].ival = v_stack[v_sp - 1].ival;
@@ -6902,7 +7379,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
              (*(int_t (*) (char *, char *, int, value *))sym->func) // call prn(...)
                  (sres, // put result string in sres first
                   v_stack[v_sp - n_args].get_str (), n_args - 1, &v_stack[v_sp - n_args + 1]);
-             if (sres[0]) scfg |= STR;
+             if (sres[0]) 
+              {
+               //fflags |= STR;
+              }
              v_stack[v_sp - n_args - 1].sval = dupString(sres);
              v_stack[v_sp - n_args - 1].ival = 0;
              v_stack[v_sp - n_args - 1].tag  = tvSTR;
@@ -7148,9 +7628,10 @@ float__t calculator::evaluate (char *expression, __int64 *piVal, float__t *pimva
                  {
                   v_stack[v_sp - n_args - 1].sval = dupString (pCalculator->get_str_res());
                   v_stack[v_sp - n_args - 1].tag  = tvSTR;
-                  scfg |= STR;
+                  fflags |= STR;
                  }
 
+                fflags |= pCalculator->isfflags ();
                 delete pCalculator;
                 v_sp -= n_args; // pop arguments
              }

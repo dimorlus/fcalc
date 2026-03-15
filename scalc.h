@@ -44,15 +44,18 @@
 #define IGR  (1 << 18) // (UI) Integer output
 #define UNS  (1 << 19) // (UI) Unsigned output
 #define ALL  (1 << 20) // (UI) All outputs
-#define MIN  (1 << 21) // (UI) Esc minimized feature
-#define MNU  (1 << 22) // (UI) Show/hide menu feature
+#define MIN  (1 << 21) // (UI) Esc minimized feature (GUI only)
+#define OPT  (1 << 21) // (UI) Print options (CLI only)
+#define MNU  (1 << 22) // (UI) Show/hide menu feature (GUI only)
+#define SRC  (1 << 22) // (UI) Print source expression (CLI only)
 #define UTM  (1 << 23) // (UI) Unix time
 #define FRC  (1 << 24) // (UI) Fraction output
 #define FRI  (1 << 25) // (UI) Fraction inch output
 #define FRH  (1 << 26) // (UI) Farenheit input/output
-#define TOP  (1 << 27) // (UI) Always on top
+#define TOP  (1 << 27) // (UI) Always on top (GUI only)
+#define FLT  (1 << 27) // (UI) Floating point output (CLI only)
 #define IMUL (1 << 28) // (WO) Implicit multiplication
-#define OPT  (1 << 29) // (UI) Print options (CLI only)
+#define AUTO (1 << 29) // (UI) Auto output format
 
 #define STRBUF 256 // bufer size for string operations
 #define MAXOP  64  // maximum length of operator or function name
@@ -61,6 +64,7 @@
 
 #ifdef __BORLANDC__
 
+#pragma warn -8027
 #define nullptr NULL
 #define _long_double_
 typedef unsigned char uint8_t;
@@ -214,6 +218,7 @@ enum t_symbol // t_symbol represents the type of a symbol in the calculator
 {
  tsVARIABLE, // tsVARIABLE represents a variable symbol
  tsCONSTANT, // tsCONSTANT represents a constant symbol
+ tsFFUNCI1,  // float f(int x)
  tsIFUNCF1,  // int f(float x)
  tsSFUNCF1,  // char* f(float x)
  tsIFUNC1,   // int f(int x)
@@ -258,6 +263,7 @@ enum t_mxDim
 #define MASK_NONE 0x00000000
 #define MASK_VARIABLE (1<< tsVARIABLE) // tsVARIABLE represents a variable symbol
 #define MASK_CONSTANT (1<< tsCONSTANT) // tsCONSTANT represents a constant symbol
+#define MASK_FFUNCI1 (1<< tsFFUNCI1) // tsFFUNCI1 represents a float function with one int argument
 #define MASK_IFUNCF1 (1<< tsIFUNCF1) // tsIFUNCF1 represents an int function with one float argument
 #define MASK_SFUNCF1 (1<< tsSFUNCF1) // tsSFUNCF1 represents a char* function with one float argument
 #define MASK_IFUNC1 (1<< tsIFUNC1) // tsIFUNC1 represents an int function with one int argument
@@ -282,7 +288,7 @@ enum t_mxDim
                     | MASK_IFUNC2 | MASK_FFUNC1  | MASK_FFUNC2 | MASK_FFUNC3  \
                     | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 \
                     | MASK_FFUNCM |MASK_FFUNCM2 | MASK_MFUNCM | MASK_MFUNCM2 \
-                    | MASK_VFUNC2 | MASK_UFUNCT)
+                    | MASK_VFUNC2 | MASK_UFUNCT| MASK_FFUNCI1)
 
 enum v_func // v_func represents the index of a built-in function in the calculator
 {
@@ -510,6 +516,7 @@ class calculator // calculator represents the main class for the expression calc
 {
  private:
  int scfg; // Syntax configuration flags
+ int fflags; // Founded format flags
  int deep; // Current stack depth
  value v_stack[max_stack_size]; // Value stack for operands
  symbol *hash_table[hash_table_size]; // Hash table for variables and functions
@@ -585,6 +592,7 @@ class calculator // calculator represents the main class for the expression calc
                                                     // with the given name and expression
 
  // Expression parsing
+ void isNRM (char *start, char *end); // Check if the current position in the expression is a normalized number format
  t_operator sscan (symbol *sym); // Scan body of the solve, integr and diff 
 
  t_operator sqbraces (void); // Scan [..] matrix/vector constructor 
@@ -671,6 +679,10 @@ class calculator // calculator represents the main class for the expression calc
              int deep = 0); // Constructor with optional syntax configuration
  inline void syntax (int cfg = PAS + SCI + UPCASE + FFLOAT)  { scfg = cfg; } // Set syntax configuration
  inline int issyntax (void) { return scfg; } // Get current syntax configuration
+
+ inline int isfflags (void) { return fflags; } // Get current flags configuration
+ inline void clrfflags (void) { fflags = 0; } // Clear flags configuration
+
  inline char *error (void) { return err; }   // Get error message
  inline int errps (void) { return errpos; }; // Get error position
  inline char *Sres (void) { return sres; };  // Get string result
@@ -704,7 +716,7 @@ class calculator // calculator represents the main class for the expression calc
    return mxprint (res_rows, res_cols, res_mval, str, nl, size);
   }
 
- int printres (char *str);
+ int printres (char *str, int options = FFLOAT, int binwide = 64);
 
  int varlist (char *buf, int bsize, // Get a list of variables in the calculator and store it in the provided
               int *maxlen = nullptr); // buffer, with an optional maximum length for variable names 
@@ -737,5 +749,4 @@ extern bool IsNaN (const double fVal); // Function to check if a double-precisio
 extern bool IsNaNL (const long double ldVal); // Function to check if a long double-precision floating-point
                                               // value is NaN (Not a Number)
 #define isnan(a) (a != a) // Macro to check if a value is NaN (Not a Number) by comparing it to itself
-
 #endif // scalcH

@@ -42,9 +42,9 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a1 -b- -k- -vi -c -tW -tWM
+CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a8 -6 -b- -k- -vi -c -tW -tWM
 IDLCFLAGS = -I"C:\Program Files (x86)\Borland\CBuilder6\Projects" -I$(BCB)\include \
-    -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
+    -I$(BCB)\include\vcl -src_suffix cpp -boa
 PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
 RFLAGS = 
 AFLAGS = /mx /w2 /zn

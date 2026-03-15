@@ -13,28 +13,28 @@ BCB = $(MAKEDIR)\..
 
 VERSION = BCB.06.00
 # ---------------------------------------------------------------------------
-PROJECT = RegExpCalculator.exe
-OBJFILES = RegExpCalculator.obj HTMLHelpViewer.obj UseHTMLHelp.obj scalc.obj \
-    StrUtils.obj RegExpClass.obj RegExpCalc.obj sfmts.obj sfunc.obj
-RESFILES = RegExpCalculator.res
-MAINSOURCE = RegExpCalculator.cpp
-RESDEPEN = $(RESFILES) RegExpCalc.dfm
+PROJECT = fcalc.exe
+OBJFILES = fcalc.obj sfmts.obj ViewVars.obj scalc.obj HTMLHelpViewer.obj \
+    UseHTMLHelp.obj StrUtils.obj frcalc.obj sfunc.obj
+RESFILES = fcalc.res
+MAINSOURCE = fcalc.cpp
+RESDEPEN = $(RESFILES) fcalc.dfm ViewVars.dfm frcalc.dfm
 LIBFILES = hhctrl.lib
 IDLFILES = 
 IDLGENFILES = 
 LIBRARIES = rtl.lib vcl.lib
 PACKAGES = vcl.bpi rtl.bpi vclx.bpi BC100R61.bpi BCDB100R61.bpi bcqr100r61.bpi \
-    aprdlgs60.bpi
+    aprdlgs60.bpi XLSRWII20_CPP6.bpi
 SPARELIBS = vcl.lib rtl.lib
 DEFFILE = 
 OTHERFILES = 
 # ---------------------------------------------------------------------------
 DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
-USERDEFINES = _DEBUG
+USERDEFINES = 
 SYSDEFINES = NO_STRICT
-INCLUDEPATH = ..;$(BCB)\include;$(BCB)\include\vcl
-LIBPATH = ..;$(BCB)\lib\obj;$(BCB)\lib
+INCLUDEPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\include;$(BCB)\include\vcl
+LIBPATH = "C:\Program Files (x86)\Borland\CBuilder6\Projects";$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
 WARNINGS= -w-par
 PATHCPP = .;
 PATHASM = .;
@@ -42,13 +42,13 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a8 -b- -k -y -v -vi- -c \
-    -tW -tWM
-IDLCFLAGS = -I.. -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
-PFLAGS = -$Y+ -$W -$O- -$A8 -v -JPHNE -M
+CFLAG1 = -O2 -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a1 -b- -k- -vi -c -tW -tWM
+IDLCFLAGS = -I"C:\Program Files (x86)\Borland\CBuilder6\Projects" -I$(BCB)\include \
+    -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa
+PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
 RFLAGS = 
-AFLAGS = /mx /w2 /zi
-LFLAGS = -D"" -aa -Tpe -x -Gn -v
+AFLAGS = /mx /w2 /zn
+LFLAGS = -D"" -aa -Tpe -x -Gn
 # ---------------------------------------------------------------------------
 ALLOBJ = c0w32.obj sysinit.obj $(OBJFILES)
 ALLRES = $(RESFILES)
