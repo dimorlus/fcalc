@@ -155,6 +155,12 @@ void __fastcall TCalcForm::FormDestroy(TObject *Sender)
  delete ccalc;
 }
 //---------------------------------------------------------------------------
+void __fastcall TCalcForm::DrawBar(int Color)
+{
+ Canvas->Brush->Color = (TColor)Color;
+ Canvas->Brush->Style = bsSolid;
+ Canvas->FillRect(Rect(0,0,100,100));
+}
 
 void __fastcall TCalcForm::AddHist(void)
 {
@@ -295,14 +301,14 @@ void __fastcall TCalcForm::CBStrKeyPress(TObject *Sender, char &Key)
 }
 //---------------------------------------------------------------------------
 
-float__t Help(float__t d)
+int_t Help(int_t d)
 {
  Application->HelpCommand(HELP_CONTENTS, 0);
  return 0;
 }
 //---------------------------------------------------------------------------
 
-float__t menu(float__t d)
+int_t menu(int_t d)
 {
  if (d == 0)
   {
@@ -333,14 +339,14 @@ float__t home(float__t x, float__t y)
 }
 //---------------------------------------------------------------------------
 
-float__t vars(float__t d)
+int_t vars(int_t d)
 {
  CalcForm->Variables1Click(NULL);
  return 0;
 }
 //---------------------------------------------------------------------------
 
-float__t fOpacity(float__t d)
+int_t fOpacity(int_t d)
 {
  d = d * 255.0/100;
  if (d < 20.0) d = 20.0;
@@ -351,13 +357,18 @@ float__t fOpacity(float__t d)
 }
 //---------------------------------------------------------------------------
 
-float__t BinWide(float__t d)
+int_t BinWide(int_t d)
 {
  if (d > 64.0) d = 64.0;
  CalcForm->binwide = (int)d;
  return 0;
 }
 
+int_t color(int_t d)
+{
+ CalcForm->DrawBar(d);
+ return d;
+}
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 void __fastcall TCalcForm::FormCreate(TObject *Sender)
@@ -427,11 +438,13 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
    delete Reg;
   }
 #endif
- ccalc->addfn("help", (void*)(float__t(*)(float__t))Help);
- ccalc->addfn("menu", (void*)(float__t(*)(float__t))menu);
- ccalc->addfn("vars", (void*)(float__t(*)(float__t))vars);
- ccalc->addfn("opacity", (void*)(float__t(*)(float__t))fOpacity);
- ccalc->addfn("binwide", (void*)(float__t(*)(float__t))BinWide);
+ ccalc->addfn("help", (void*)(int_t(*)(int_t))Help);
+ ccalc->addfn("color", (void*)(int_t(*)(int_t))color);
+
+ ccalc->addfn("menu", (void*)(int_t(*)(int_t))menu);
+ ccalc->addfn("vars", (void*)(int_t(*)(int_t))vars);
+ ccalc->addfn("opacity", (void*)(int_t(*)(int_t))fOpacity);
+ ccalc->addfn("binwide", (void*)(int_t(*)(int_t))BinWide);
  ccalc->addfn2("home", (void*)(float__t(*)(float__t, float__t))home);
  //AlphaBlend = true;
  //AlphaBlendValue = opacity;

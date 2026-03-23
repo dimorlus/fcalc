@@ -1,6 +1,6 @@
 object CalcForm: TCalcForm
-  Left = 396
-  Top = 214
+  Left = 500
+  Top = 253
   HelpContext = 3005
   BorderIcons = [biSystemMenu, biMinimize, biMaximize, biHelp]
   BorderStyle = bsSingle

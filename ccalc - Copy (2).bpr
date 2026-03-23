@@ -3,19 +3,17 @@
 <PROJECT>
   <MACROS>
     <VERSION value="BCB.06.00"/>
-    <PROJECT value="fcalc.exe"/>
-    <OBJFILES value="fcalc.obj sfmts.obj ViewVars.obj scalc.obj HTMLHelpViewer.obj 
-      UseHTMLHelp.obj StrUtils.obj frcalc.obj sfunc.obj"/>
-    <RESFILES value="fcalc.res"/>
+    <PROJECT value="ccalc.exe"/>
+    <OBJFILES value="ccalc.obj scalc.obj sfmts.obj sfunc.obj"/>
+    <RESFILES value="ccalc.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
     <DEFFILE value=""/>
-    <RESDEPEN value="$(RESFILES) fcalc.dfm ViewVars.dfm frcalc.dfm"/>
-    <LIBFILES value="hhctrl.lib"/>
-    <LIBRARIES value="rtl.lib vcl.lib"/>
-    <SPARELIBS value="vcl.lib rtl.lib"/>
-    <PACKAGES value="vcl.bpi rtl.bpi vclx.bpi BC100R61.bpi BCDB100R61.bpi bcqr100r61.bpi 
-      aprdlgs60.bpi XLSRWII20_CPP6.bpi"/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value=""/>
+    <SPARELIBS value=""/>
+    <PACKAGES value="vcl.bpi rtl.bpi vclx.bpi"/>
     <PATHCPP value=".;"/>
     <PATHPAS value=".;"/>
     <PATHRC value=".;"/>
@@ -24,73 +22,68 @@
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
     <USERDEFINES value="_DEBUG"/>
-    <SYSDEFINES value="NO_STRICT"/>
-    <MAINSOURCE value="fcalc.cpp"/>
-    <INCLUDEPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;$(BCB)\include;$(BCB)\include\vcl"/>
-    <LIBPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl"/>
+    <SYSDEFINES value="NO_STRICT;_NO_VCL;_RTLDLL;USEPACKAGES"/>
+    <MAINSOURCE value="ccalc.bpf"/>
+    <INCLUDEPATH value="D:\PCProjects\fcalc;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="D:\PCProjects\fcalc;$(BCB)\lib\obj;$(BCB)\lib"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
   <OPTIONS>
-    <IDLCFLAGS value="-I&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot; -I$(BCB)\include 
-      -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa"/>
-    <CFLAG1 value="-Od -Vx -Ve -X- -r- -a8 -6 -b- -k -y -v -vi- -c -tW -tWM"/>
-    <PFLAGS value="-$Y+ -$W -$O- -$A8 -v -JPHNE -M"/>
+    <IDLCFLAGS value="-ID:\PCProjects\fcalc -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix 
+      cpp -D_DEBUG -boa"/>
+    <CFLAG1 value="-tWC -tWM -Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a8 -b- -k -y -v 
+      -vi- -c"/>
+    <PFLAGS value="-$YD -$W -$O- -$A8 -v -JPHNE -M"/>
     <RFLAGS value=""/>
-    <AFLAGS value="/mx /w2 /zi"/>
-    <LFLAGS value="-D&quot;&quot; -aa -Tpe -x -Gn -v"/>
+    <AFLAGS value="/mx /w2 /zd"/>
+    <LFLAGS value="-Tpe -ap -D&quot;&quot; -x -Gn -v"/>
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0w32.obj sysinit.obj $(OBJFILES)"/>
+    <ALLOBJ value="c0x32.obj $(PACKAGES) $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
-    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mt.lib"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32mti.lib"/>
     <OTHERFILES value=""/>
   </LINKER>
   <FILELIST>
-      <FILE FILENAME="fcalc.res" FORMNAME="" UNITNAME="fcalc.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="fcalc.cpp" FORMNAME="Form1" UNITNAME="fcalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="sfmts.cpp" FORMNAME="" UNITNAME="sfmts" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="ViewVars.cpp" FORMNAME="VarsFrm" UNITNAME="ViewVars" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="scalc.cpp" FORMNAME="" UNITNAME="scalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="HTMLHelpViewer.pas" FORMNAME="" UNITNAME="HTMLHelpViewer" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="UseHTMLHelp.pas" FORMNAME="" UNITNAME="UseHTMLHelp" CONTAINERID="PascalCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="StrUtils.cpp" FORMNAME="" UNITNAME="StrUtils" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="hhctrl.lib" FORMNAME="" UNITNAME="hhctrl.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="frcalc.cpp" FORMNAME="CalcForm" UNITNAME="frcalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="sfunc.cpp" FORMNAME="" UNITNAME="sfunc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ccalc.res" FORMNAME="" UNITNAME="ccalc.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ccalc.bpf" FORMNAME="" UNITNAME="ccalc" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ccalc.cpp" FORMNAME="" UNITNAME="ccalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="scalc.cpp" FORMNAME="" UNITNAME="scalc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="sfmts.cpp" FORMNAME="" UNITNAME="sfmts.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="sfunc.cpp" FORMNAME="" UNITNAME="sfunc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
 
   <IDEOPTIONS>
 [Version Info]
-IncludeVerInfo=1
+IncludeVerInfo=0
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=0
 Build=0
 Debug=0
-PreRelease=1
+PreRelease=0
 Special=0
 Private=0
 DLL=0
 Locale=1033
-CodePage=1200
+CodePage=1252
 
 [Version Info Keys]
-CompanyName=Metrolight LTD
-FileDescription=Scientific formula calculator
-FileVersion=1.00.0000
-InternalName=Fcalc
-LegalCopyright=Metrolight LTD
-LegalTrademarks=Copyright 2008 Dmitry Orlov.
-OriginalFilename=fcalc.exe
-ProductName=Scientific formula calculator
-ProductVersion=1.00.0000
-Comments=Scientific formula calculator
-Date=08-14-08. 00:52:02
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
 
 [Excluded Packages]
 C:\Program Files (x86)\Borland\CBuilder6\Bin\dbx60.bpl=Borland SQL Explorer UI Package
@@ -129,32 +122,6 @@ c:\program files (x86)\borland\cbuilder6\Bin\dcldbx60.bpl=Borland dbExpress Comp
 c:\program files (x86)\borland\cbuilder6\Bin\dcldbxcds60.bpl=Borland Local DBX ClientDataset Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclindy60.bpl=Internet Direct (Indy) for D6 Property and Component Editors
 c:\program files (x86)\borland\cbuilder6\Bin\bcb2kaxserver60.bpl=Borland C++Builder COM Server Components Sample Package
-
-[HistoryLists\hlIncludePath]
-Count=5
-Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\include;$(BCB)\include\vcl
-Item1=$(BCB)\include;$(BCB)\include\vcl
-Item2=UseHTMLHelp;$(BCB)\include;$(BCB)\include\vcl
-Item3=$(BCB)\include;$(BCB)\include\vcl
-Item4=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;$(BCB)\include;$(BCB)\include\vcl
-
-[HistoryLists\hlLibraryPath]
-Count=6
-Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
-Item1=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj
-Item2=$(BCB)\lib;$(BCB)\lib\obj
-Item3=$(BCB)\lib;$(BCB)\lib\obj
-Item4=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;
-Item5=
-
-[HistoryLists\hlDebugSourcePath]
-Count=2
-Item0=$(BCB)\source\vcl
-Item1=
-
-[HistoryLists\hlConditionals]
-Count=1
-Item0=_DEBUG
 
 [Debugging]
 DebugSourceDirs=$(BCB)\source\vcl
