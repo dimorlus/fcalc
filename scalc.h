@@ -14,7 +14,7 @@
 #endif
 
 #include <cstdlib> // for free() function
-
+#include <limits>
 
 // RW - set both by calc engine and application
 // WO - set only from application
@@ -74,25 +74,169 @@ typedef __int64 int64_t;
 typedef unsigned __int64 unsigned_t;
 #else //__BORLANDC__
 
-#define _long_double_
 #include <cstdint>
+#include <cstring> 
+
+#ifdef __GNUC__
+#define _float128_
+#else
+#define _long_double_
+#endif
 typedef int64_t int_t;
 typedef uint64_t unsigned_t;
 #endif //__BORLANDC__
 
+#ifdef _float128_
+#include <quadmath.h>
+#endif
+
+
+#ifdef _float128_
+inline bool isnan(__float128 x) { return isnanq(x); }
+inline bool isinf(__float128 x) { return isinfq(x); }
+inline bool isfinite(__float128 x) { return finiteq(x); }
+#endif
+
+#ifdef _float128_
+#define MAX_PREC 34
+namespace std
+{
+inline __float128 pow (__float128 x, __float128 y)
+{
+ return powq (x, y);
+}
+inline __float128 fmod (__float128 x, __float128 y)
+{
+ return fmodq (x, y);
+}
+inline __float128 hypot (__float128 x, __float128 y)
+{
+ return hypotq (x, y);
+}
+inline __float128 atan2 (__float128 y, __float128 x)
+{
+ return atan2q (y, x);
+}
+inline __float128 sin (__float128 x)
+{
+ return sinq (x);
+}
+inline __float128 cos (__float128 x)
+{
+ return cosq (x);
+}
+inline __float128 tan (__float128 x)
+{
+ return tanq (x);
+}
+inline __float128 asin (__float128 x)
+{
+ return asinq (x);
+}
+inline __float128 acos (__float128 x)
+{
+ return acosq (x);
+}
+inline __float128 atan (__float128 x)
+{
+ return atanq (x);
+}
+inline __float128 sinh (__float128 x)
+{
+ return sinhq (x);
+}
+inline __float128 cosh (__float128 x)
+{
+ return coshq (x);
+}
+inline __float128 tanh (__float128 x)
+{
+ return tanhq (x);
+}
+inline __float128 sqrt (__float128 x)
+{
+ return sqrtq (x);
+}
+inline __float128 exp (__float128 x)
+{
+ return expq (x);
+}
+inline __float128 log (__float128 x)
+{
+ return logq (x);
+}
+inline __float128 log10 (__float128 x)
+{
+ return log10q (x);
+}
+inline __float128 fabs (__float128 x)
+{
+ return fabsq (x);
+}
+inline __float128 floor (__float128 x)
+{
+ return floorq (x);
+}
+inline __float128 ceil (__float128 x)
+{
+ return ceilq (x);
+}
+inline __float128 round (__float128 x)
+{
+ return roundq (x);
+}
+inline bool isnan (__float128 x)
+{
+ return isnanq (x);
+}
+inline bool isinf (__float128 x)
+{
+ return isinfq (x);
+}
+inline bool isfinite (__float128 x)
+{
+ return finiteq (x);
+}
+}
+// and in the global namespace too — for calls without std::
+using std::acos;
+using std::asin;
+using std::atan;
+using std::atan2;
+using std::ceil;
+using std::cos;
+using std::cosh;
+using std::exp;
+using std::fabs;
+using std::floor;
+using std::fmod;
+using std::hypot;
+using std::log;
+using std::log10;
+using std::pow;
+using std::round;
+using std::sin;
+using std::sinh;
+using std::sqrt;
+using std::tan;
+using std::tanh;
+#endif
 #ifdef _long_double_
 typedef long double float__t;
-#else
-typedef double float__t;
+#define MAX_PREC 20
 #endif
+
+#ifdef _float128_
+typedef __float128 float__t;
+#define fabsl  fabsq
+#endif
+
 
 #ifdef __BORLANDC__
 const float__t qnan = 0.0 / 0.0;
 #else
 constexpr float__t qnan = std::numeric_limits<float__t>::quiet_NaN ();
 #endif
-
-//#define _STATIC_MM_
 
 class value;
 class symbol;
@@ -221,6 +365,7 @@ enum t_symbol // t_symbol represents the type of a symbol in the calculator
  tsFFUNCI1,  // float f(int x)
  tsIFUNCF1,  // int f(float x)
  tsSFUNCF1,  // char* f(float x)
+ tsCIFUNC1,  // int f(this, int x)
  tsIFUNC1,   // int f(int x)
  tsIFUNC2,   // int f(int x, int y)
  tsFFUNC1,   // float f(float x)
@@ -267,6 +412,7 @@ enum t_mxDim
 #define MASK_IFUNCF1 (1<< tsIFUNCF1) // tsIFUNCF1 represents an int function with one float argument
 #define MASK_SFUNCF1 (1<< tsSFUNCF1) // tsSFUNCF1 represents a char* function with one float argument
 #define MASK_IFUNC1 (1<< tsIFUNC1) // tsIFUNC1 represents an int function with one int argument
+#define MASK_CIFUNC1 (1<< tsCIFUNC1) // tsCIFUNC1 represents an int function with one int argument and a this pointer
 #define MASK_IFUNC2 (1<< tsIFUNC2) // tsIFUNC2 represents an int function with two int arguments
 #define MASK_FFUNC1 (1<< tsFFUNC1) // tsFFUNC1 represents a float function with one float argument
 #define MASK_FFUNC2 (1<< tsFFUNC2) // tsFFUNC2 represents a float function with two float arguments
@@ -288,7 +434,7 @@ enum t_mxDim
                     | MASK_IFUNC2 | MASK_FFUNC1  | MASK_FFUNC2 | MASK_FFUNC3  \
                     | MASK_PFUNCn | MASK_SFUNCF2 | MASK_SIFUNC1 | MASK_VFUNC1 \
                     | MASK_FFUNCM |MASK_FFUNCM2 | MASK_MFUNCM | MASK_MFUNCM2 \
-                    | MASK_VFUNC2 | MASK_UFUNCT| MASK_FFUNCI1)
+                    | MASK_VFUNC2 | MASK_UFUNCT| MASK_FFUNCI1 | MASK_CIFUNC1 )
 
 enum v_func // v_func represents the index of a built-in function in the calculator
 {
@@ -362,7 +508,6 @@ class value // value represents a value in the calculator, which can be an integ
  }
 
  inline float__t get () { return tag == tvINT ? (float__t)ival : fval; }
- inline float__t get_dbl () { return tag == tvINT ? (double)ival : (double)fval; }
  inline int_t get_int () { return tag == tvINT ? ival : (int_t)fval; }
  inline char *get_str () { return tag == tvSTR ? sval : nullptr; }
  inline bool is_scalar () { return tag == tvINT || tag == tvFLOAT; }
@@ -521,14 +666,7 @@ class calculator // calculator represents the main class for the expression calc
  value v_stack[max_stack_size]; // Value stack for operands
  symbol *hash_table[hash_table_size]; // Hash table for variables and functions
  t_operator o_stack[max_stack_size]; // Operator stack
-
- #ifdef _STATIC_MM_
- void *mem_list[max_stack_size]; // Memory for temporary strings used during expression parsing and
-                            // evaluation
- int mem_idx;               // Index for the mem array  to manage temporary string memory
-#else //_STATIC_MM_
  MemList mem_list; // Memory list for temporary strings used during expression parsing and evaluation
-#endif //_STATIC_MM_
 
  int v_sp; // Value stack pointer
  int o_sp; // Operator stack pointer
@@ -538,6 +676,7 @@ class calculator // calculator represents the main class for the expression calc
  char err[80]; // Error message buffer
  char mxerr[80]; // Error message buffer for matrix operations
  int errpos;   // Error position
+ int fprec;      // Floating point precision for output formatting
  char c_imaginary; // Imaginary unit character
  bool expr;    // Expression flag
  char sres[STRBUF]; // String result buffer
@@ -557,18 +696,6 @@ class calculator // calculator represents the main class for the expression calc
  void copy_symbols (symbol **symtab = nullptr, int mask = MASK_DEFAULT);
 
  //memory management
-#ifdef _STATIC_MM_
- void init_mem_list (); // Initialize the mem array and mem_idx for memory management of temporary
-                        // strings and matrix values
- int search_mem (void *mem); // Search for a pointer in the mem array and return its index, or -1 if not found
-  void *register_mem (void *mem); // Register a pointer in the mem array and return the registered pointer
- void *unregister_mem (void *mem); // Unregister a pointer from the mem array by setting its entry to nullptr
-  void clear_mem_list (void); // Clear all strings in the string list
- void *sf_alloc (int size); // Allocate memory for a temporary string and register it in the mem
-                            // array for memory management
- void sf_free (void *dat);  // Free memory for a temporary string and unregister it from the mem
-                            // array for memory management
-#else //_STATIC_MM_
  void init_mem_list () { mem_list.init_mem_list (); }
  int search_mem (void *mem) { return mem_list.search_mem (mem); }
  void *register_mem (void *mem) { return mem_list.register_mem (mem); }
@@ -576,7 +703,6 @@ class calculator // calculator represents the main class for the expression calc
  void *sf_alloc (int size) { return mem_list.sf_alloc (size); }
  void sf_free (void *dat) { mem_list.sf_free (dat); }
  void clear_mem_list (void) { mem_list.free_all (); }
-#endif //_STATIC_MM_
 
  // sybol table management
  void save_vars_mem (void); // Save the current variables in the hash table to the mem array for
@@ -622,18 +748,19 @@ class calculator // calculator represents the main class for the expression calc
  int xscanf (char *str, int len, int_t &ival, int &nn); // Scan a hexadecimal number from the string 
                                                //with a specified length and store it in ival, with nn being 
                                                // the number of characters processed
- float__t dstrtod (char *s, char **endptr); // Convert a string to a double-precision floating-point number
- float__t tstrtod (char *s, char **endptr); // Convert a string to a long double-precision floating-point number
- void engineering (float__t mul, char *&fpos, float__t &fval); // Perform engineering notation conversion
- void scientific (char *&fpos, float__t &fval); // Perform scientific notation conversion
+ double dstrtod (char *s, char **endptr); // Convert a string to a double-precision floating-point number
+ double tstrtod (char *s, char **endptr); // Convert a string to a double-precision floating-point number
+ void engineering (double mul, char *&fpos, double &fval); // Perform engineering notation conversion
+ void scientific (char *&fpos, double &fval); // Perform scientific notation conversion
  
  bool set_op (); // Assign a value to a variable
  void clear_v_stack (); // Clear the value stack
  void addim (void); // Add imaginary unit
  
  // Math for solving, integrating and differentiating
- float__t Solve (const char *expr, t_symbol tag); // Solve an equation given by the expression and
-                                                  // return the solution as a floating-point value
+ 
+ // Solve an equation given by the expression and return the solution as a complex value
+ bool Solve (const char *expr, t_symbol tag, float__t &re_res, float__t &im_res);
 
  float__t gkEval (calculator *pCalc, char *sexpr, // Evaluate a function for a given expression, variable name, and
                   const char *svar, float__t x); // variable value, and return the result as a floating-point value
@@ -701,12 +828,15 @@ class calculator // calculator represents the main class for the expression calc
 
  void addvar (const char *name, value &val); // Add a variable with a specified value to the calculator
  void addfconst (const char *name, float__t val); // Add a floating-point constant to the calculator
- void addfvar (const char *name, float__t val); // Add a floating-point variable to the calculator
+ // Add or assign if existing a floating-point or complex variable to the calculator
+ void addfvar (const char *name, float__t fval, float__t imval = (float__t)0.0L);                
  void addivar (const char *name, int_t val); // Add an integer variable to the calculator
  void addlvar (const char *name, float__t fval, int_t ival); // Add a long variable to the calculator
- void addfn (const char *name, void *func) { add (tsFFUNC1, name, func); } // Add a function to the calculator
+ void addfn (const char *name, void *func) { add (tsIFUNC1, name, func); } // Add a function to the calculator
  void addfn2 (const char *name, void *func) { add (tsFFUNC2, name, func); } // Add a function with two arguments to the calculator
 
+ void set_fprec (int prec) { fprec = prec; } // Set floating-point precision for output formatting
+ int get_fprec () { return fprec; } // Get current floating-point precision for output formatting
  int print (char *str, int Options, int binwide, // Print a string representation of the result with specified
             int *size = nullptr); // options and binary width,
  
@@ -721,9 +851,11 @@ class calculator // calculator represents the main class for the expression calc
  int varlist (char *buf, int bsize, // Get a list of variables in the calculator and store it in the provided
               int *maxlen = nullptr); // buffer, with an optional maximum length for variable names 
                           
- float__t  evaluate (char *expr, // Evaluate an expression   
+ float__t evaluate_f (char *expr, // Evaluate an expression   
            __int64 *piVal = nullptr, float__t *pimval = nullptr); 
-                       
+
+  double evaluate (char *expr) { return (double)evaluate_f (expr); } // Evaluate an expression
+
  inline char *get_last_var (void) { return lastvar; }; // Get the last variable name assigned in the 
                                                        //expression  
  int64_t get_int_res () { return result_ival; };
@@ -739,14 +871,19 @@ class calculator // calculator represents the main class for the expression calc
   res.mval = res_mval;
   return res;
  };
-
-
  ~calculator (void); // Destructor to clean up resources
 };
 
-extern bool IsNaN (const double fVal); // Function to check if a double-precision floating-point
-                                       // value is NaN (Not a Number)
-extern bool IsNaNL (const long double ldVal); // Function to check if a long double-precision floating-point
-                                              // value is NaN (Not a Number)
-#define isnan(a) (a != a) // Macro to check if a value is NaN (Not a Number) by comparing it to itself
+#ifdef __BORLANDC__
+ extern bool IsNaN (const double fVal); // Function to check if a double-precision floating-point
+                                        // value is NaN (Not a Number)
+ extern bool IsNaNL (const long double ldVal); // Function to check if a long double-precision
+                                              // floating-point
+//  value is NaN (Not a Number)
+// #define isnan(a) (a != a) // Macro to check if a value is NaN (Not a Number) by comparing it to
+                             // itself
+#define isnan(a) IsNaNL (a)
+#endif
+
+
 #endif // scalcH

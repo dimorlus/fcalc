@@ -1,6 +1,6 @@
 object CalcForm: TCalcForm
-  Left = 126
-  Top = 101
+  Left = 396
+  Top = 214
   HelpContext = 3005
   BorderIcons = [biSystemMenu, biMinimize, biMaximize, biHelp]
   BorderStyle = bsSingle
@@ -97,6 +97,11 @@ object CalcForm: TCalcForm
         Caption = 'Forced &float'
         Hint = 'Disable integer calculation'
         OnClick = ForcedfloatClick
+      end
+      object ImpMul: TMenuItem
+        Caption = 'Implicit multiplication'
+        Checked = True
+        OnClick = ImpMulClick
       end
       object Format: TMenuItem
         Caption = 'F&ormat...'

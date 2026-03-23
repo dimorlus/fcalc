@@ -54,6 +54,7 @@ __published:	// IDE-managed Components
         TMenuItem *Fraction;
         TMenuItem *Inch;
         TMenuItem *Temperature;
+        TMenuItem *ImpMul;
         void __fastcall CBStrChange(TObject *Sender);
         void __fastcall FormCreate(TObject *Sender);
         void __fastcall FormDestroy(TObject *Sender);
@@ -99,6 +100,7 @@ __published:	// IDE-managed Components
         void __fastcall FractionClick(TObject *Sender);
         void __fastcall InchClick(TObject *Sender);
         void __fastcall TemperatureClick(TObject *Sender);
+        void __fastcall ImpMulClick(TObject *Sender);
         //void __fastcall StringClick(TObject *Sender);
 private:	// User declarations
         calculator *ccalc;

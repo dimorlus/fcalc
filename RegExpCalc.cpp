@@ -419,10 +419,9 @@ void sprtst(char *dst, char *sfmt, char *str, calculator *ccalc)
           break;
           case tFloat:
            {
-            __int64 iVal;
             float d;
 
-            if (ccalc) d = ccalc->evaluate(pstr, &iVal);
+            if (ccalc) d = ccalc->evaluate(pstr);
             else d = (float)atof(pstr);
 
             dst += sprintf(dst, pfmt, d);
@@ -430,10 +429,9 @@ void sprtst(char *dst, char *sfmt, char *str, calculator *ccalc)
           break;
           case tDouble:
            {
-            __int64 iVal;
             double d;
 
-            if (ccalc) d = ccalc->evaluate(pstr, &iVal);
+            if (ccalc) d = ccalc->evaluate(pstr);
             else d = (double)atof(pstr);
 
             dst += sprintf(dst, pfmt, d);
@@ -441,10 +439,9 @@ void sprtst(char *dst, char *sfmt, char *str, calculator *ccalc)
           break;
           case tLongDouble:
            {
-            __int64 iVal;
             long double d;
 
-            if (ccalc) d = ccalc->evaluate(pstr, &iVal);
+            if (ccalc) d = ccalc->evaluate(pstr);
             else d = (long double)atof(pstr);
 
             dst += sprintf(dst, pfmt, d);

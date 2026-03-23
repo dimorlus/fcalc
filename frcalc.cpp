@@ -68,7 +68,6 @@ static void GetVars(char *Name, float_t fVal)
 //#define USE_calculator_format_out
 void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 {
- __int64 iVal;
  int n = 0;
  int prnsize;
  char strings[2048];
@@ -86,7 +85,7 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 //  SetExceptionMask(GetExceptionMask() << exZeroDivide << exInvalidOp << exDenormalized << exOverflow << exUnderflow << exPrecision);
  try
   {
-   fVal = ccalc->evaluate(CBStr->Text.c_str(), &iVal, &imVal);
+   fVal = ccalc->evaluate(CBStr->Text.c_str());
   }
  catch ( ... )
   {
@@ -138,11 +137,11 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+10+
             GetMainMenuHeight()+
-            ((CBStr->Height*0.7)*(n));
+            ((CBStr->Height*0.65)*(n));
  else
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+//10+
-            ((CBStr->Height*0.7)*(n));
+            ((CBStr->Height*0.65)*(n));
  SendMessage(MOutput->Handle, WM_VSCROLL, SB_TOP, 0);
  SendMessage(MOutput->Handle, WM_HSCROLL, SB_TOP, 0);
  SetOpt();
@@ -526,7 +525,11 @@ void __fastcall TCalcForm::SetOpt(bool forced)
 
  Cstyle->Checked = true;
 
- ccalc->syntax(opt & (PAS+UPCASE+FFLOAT+FRI)|(SCI));
+ if (ImpMul->Checked) opt |= IMUL;
+ else opt &= ~IMUL;
+
+
+ ccalc->syntax(opt & (IMUL+PAS+UPCASE+FFLOAT+FRI)|(SCI));
 }
 //---------------------------------------------------------------------------
 
@@ -922,7 +925,7 @@ void __fastcall TCalcForm::N48Click(TObject *Sender)
 {
  binwide = 48;
  CBStrChange(Sender);
-}
+}                                      
 //---------------------------------------------------------------------------
 
 void __fastcall TCalcForm::N64Click(TObject *Sender)
@@ -988,9 +991,6 @@ void __fastcall TCalcForm::CBStrKeyUp(TObject *Sender, WORD &Key,
 }
 //---------------------------------------------------------------------------
 
-
-
-
 void __fastcall TCalcForm::TemperatureClick(TObject *Sender)
 {
  Temperature->Checked ^= 1;
@@ -1001,4 +1001,17 @@ void __fastcall TCalcForm::TemperatureClick(TObject *Sender)
  Options &= ~ALL;
  CBStrChange(Sender);
 }
+
+//---------------------------------------------------------------------------
+void __fastcall TCalcForm::ImpMulClick(TObject *Sender)
+{
+ ImpMul->Checked ^= 1;
+ if (ImpMul->Checked) Options |= IMUL;
+ else Options &= ~IMUL;
+
+ SetOpt();
+ CBStrChange(Sender);
+
+}
+//---------------------------------------------------------------------------
 

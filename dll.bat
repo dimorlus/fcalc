@@ -1,0 +1,3 @@
+::bcc32 -tWD -u- -O2 -D__BORLANDC__ -eclalclib_bcb.dll calclib.cpp scalc.cpp sfmts.cpp sfunc.cpp
+::bcc32 -tWD -u- -x -O2 -D__BORLANDC__ -D_RTLDLL -D_STLP_USE_DYNAMIC_LIB -D_STLP_NO_CUSTOM_IO -D_STLP_NO_OWN_IOSTREAMS -I"C:\Program Files (x86)\Borland\CBuilder6\Include" -L"C:\Program Files (x86)\Borland\CBuilder6\Lib" -ecalclib_bcb.dll calclib.cpp scalc.cpp sfmts.cpp sfunc.cpp
+bcc32 -tWD -u- -x -O2 -D__BORLANDC__ -D_RTLDLL -D_STLP_NO_CUSTOM_IO -D_STLP_NO_OWN_IOSTREAMS -I"C:\Program Files (x86)\Borland\CBuilder6\Include" -L"C:\Program Files (x86)\Borland\CBuilder6\Lib" -ecalclib_bcb.dll calclib.cpp scalc.cpp sfmts.cpp sfunc.cpp
