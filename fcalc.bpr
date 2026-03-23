@@ -135,22 +135,23 @@ c:\program files (x86)\borland\cbuilder6\Bin\bcb2kaxserver60.bpl=Borland C++Buil
 Count=5
 Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\include;$(BCB)\include\vcl
 Item1=$(BCB)\include;$(BCB)\include\vcl
-Item2=UseHTMLHelp;ccalc;$(BCB)\include;$(BCB)\include\vcl
-Item3=ccalc;$(BCB)\include;$(BCB)\include\vcl
-Item4=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;$(BCB)\include;$(BCB)\include\vcl
+Item2=UseHTMLHelp;$(BCB)\include;$(BCB)\include\vcl
+Item3=$(BCB)\include;$(BCB)\include\vcl
+Item4=UseHTMLHelp;C:\Program Files\Borland\CBuilder6\Projects;$(BCB)\include;$(BCB)\include\vcl
 
 [HistoryLists\hlLibraryPath]
-Count=5
+Count=6
 Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
-Item1=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
-Item2=$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
-Item3=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;..\Bpl
-Item4=UseHTMLHelp;..\Bpl;C:\Program Files\Borland\CBuilder6\Projects;..;ccalc;xls\package\cpp6;$(BCB)\lib\obj;$(BCB)\lib
+Item1=C:\Program Files (x86)\Borland\CBuilder6\Projects;$(BCB)\lib;$(BCB)\lib\obj
+Item2=$(BCB)\lib;$(BCB)\lib\obj
+Item3=$(BCB)\lib;$(BCB)\lib\obj
+Item4=UseHTMLHelp;$(BCB)\lib;$(BCB)\lib\obj;
+Item5=
 
 [HistoryLists\hlDebugSourcePath]
 Count=2
 Item0=$(BCB)\source\vcl
-Item1=$(BCB)\source\vcl;D:\PCProjects\apf241\
+Item1=
 
 [HistoryLists\hlConditionals]
 Count=1

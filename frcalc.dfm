@@ -16,6 +16,7 @@ object CalcForm: TCalcForm
   KeyPreview = True
   Menu = MainMenu
   OldCreateOrder = False
+  PopupMenu = PopupMenu
   ShowHint = True
   OnClose = FormClose
   OnCreate = FormCreate
@@ -237,6 +238,82 @@ object CalcForm: TCalcForm
         ShortCut = 49240
         OnClick = Exit1Click
       end
+    end
+  end
+  object PopupMenu: TPopupMenu
+    Left = 112
+    Top = 32
+    object ScientificPop: TMenuItem
+      Caption = '&Scientific'
+      OnClick = ScientificClick
+    end
+    object NormalizedPop: TMenuItem
+      Caption = '&Normalized'
+      OnClick = NormalizedClick
+    end
+    object FractionPop: TMenuItem
+      Caption = 'Fraction'
+      OnClick = FractionClick
+    end
+    object ComputingPop: TMenuItem
+      Caption = '&Computing'
+      OnClick = ComputingClick
+    end
+    object IntegerPop: TMenuItem
+      Caption = '&Integer'
+      OnClick = IntegerClick
+    end
+    object UnsignedPop: TMenuItem
+      Caption = '&Unsigned'
+      OnClick = UnsignedClick
+    end
+    object HexPop: TMenuItem
+      Caption = '&Hex'
+      OnClick = HexClick
+    end
+    object OctalPop: TMenuItem
+      Caption = '&Octal'
+      OnClick = OctalClick
+    end
+    object BinaryPop: TMenuItem
+      Caption = '&Binary'
+      OnClick = BinaryClick
+    end
+    object CharPop: TMenuItem
+      Caption = 'Cha&r'
+      OnClick = CharClick
+    end
+    object WCharPop: TMenuItem
+      Caption = '&Wide char'
+      OnClick = WCharClick
+    end
+    object DatetimePop: TMenuItem
+      Caption = 'Date &time'
+      OnClick = DatetimeClick
+    end
+    object UnixtimePop: TMenuItem
+      Caption = '&Unix time'
+      OnClick = UnixtimeClick
+    end
+    object DegreesPop: TMenuItem
+      Caption = '&Degrees'
+      OnClick = DegreesClick
+    end
+    object TemperaturePop: TMenuItem
+      Caption = '&Temperature'
+      OnClick = TemperatureClick
+    end
+    object StringPop: TMenuItem
+      Caption = 'Strin&g'
+      OnClick = StringClick
+    end
+    object InchPop: TMenuItem
+      Caption = 'Inch'
+      OnClick = InchClick
+    end
+    object AllPop: TMenuItem
+      Caption = '&All'
+      OnClick = AllClick
     end
   end
 end

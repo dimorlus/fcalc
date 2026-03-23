@@ -137,11 +137,11 @@ void __fastcall TCalcForm::CBStrChange(TObject *Sender)
    Height = GetCaptionHeight()*1.2+
             CBStr->Height+10+
             GetMainMenuHeight()+
-            ((CBStr->Height*0.65)*(n));
+            ((CBStr->Height*0.645)*(n));
  else
    Height = GetCaptionHeight()*1.2+
-            CBStr->Height+//10+
-            ((CBStr->Height*0.65)*(n));
+            CBStr->Height+10+
+            ((CBStr->Height*0.645)*(n));
  SendMessage(MOutput->Handle, WM_VSCROLL, SB_TOP, 0);
  SendMessage(MOutput->Handle, WM_HSCROLL, SB_TOP, 0);
  SetOpt();
@@ -625,6 +625,7 @@ void __fastcall TCalcForm::ForcedfloatClick(TObject *Sender)
 void __fastcall TCalcForm::ScientificClick(TObject *Sender)
 {
  Scientific->Checked ^= 1;
+ ScientificPop->Checked = Scientific->Checked;
  if (Scientific->Checked) Options |= SCI;
  else Options &= ~SCI;
 
@@ -638,6 +639,7 @@ void __fastcall TCalcForm::ScientificClick(TObject *Sender)
 void __fastcall TCalcForm::NormalizedClick(TObject *Sender)
 {
  Normalized->Checked ^= 1;
+ NormalizedPop->Checked = Normalized->Checked;
  if (Normalized->Checked) Options |= NRM;
  else Options &= ~NRM;
 
@@ -651,6 +653,7 @@ void __fastcall TCalcForm::NormalizedClick(TObject *Sender)
 void __fastcall TCalcForm::ComputingClick(TObject *Sender)
 {
  Computing->Checked ^= 1;
+ ComputingPop->Checked = Computing->Checked;
  if (Computing->Checked) Options |= CMP;
  else Options &= ~CMP;
 
@@ -663,6 +666,7 @@ void __fastcall TCalcForm::ComputingClick(TObject *Sender)
 void __fastcall TCalcForm::IntegerClick(TObject *Sender)
 {
  Integer->Checked ^= 1;
+ IntegerPop->Checked = Integer->Checked;
  if (Integer->Checked) Options |= IGR;
  else Options &= ~IGR;
 
@@ -675,6 +679,7 @@ void __fastcall TCalcForm::IntegerClick(TObject *Sender)
 void __fastcall TCalcForm::UnsignedClick(TObject *Sender)
 {
  Unsigned->Checked ^= 1;
+ UnsignedPop->Checked = Unsigned->Checked;
  if (Unsigned->Checked) Options |= UNS;
  else Options &= ~UNS;
 
@@ -687,6 +692,7 @@ void __fastcall TCalcForm::UnsignedClick(TObject *Sender)
 void __fastcall TCalcForm::HexClick(TObject *Sender)
 {
  Hex->Checked ^= 1;
+ HexPop->Checked = Hex->Checked;
  if (Hex->Checked) Options |= HEX;
  else Options &= ~HEX;
 
@@ -699,6 +705,7 @@ void __fastcall TCalcForm::HexClick(TObject *Sender)
 void __fastcall TCalcForm::OctalClick(TObject *Sender)
 {
  Octal->Checked ^= 1;
+ OctalPop->Checked = Octal->Checked;
  if (Octal->Checked) Options |= OCT;
  else Options &= ~OCT;
 
@@ -711,6 +718,7 @@ void __fastcall TCalcForm::OctalClick(TObject *Sender)
 void __fastcall TCalcForm::BinaryClick(TObject *Sender)
 {
  Binary->Checked ^= 1;
+ BinaryPop->Checked = Binary->Checked;
  if (Binary->Checked) Options |= fBIN;
  else Options &= ~fBIN;
 
@@ -723,6 +731,7 @@ void __fastcall TCalcForm::BinaryClick(TObject *Sender)
 void __fastcall TCalcForm::DatetimeClick(TObject *Sender)
 {
  Datetime->Checked ^= 1;
+ DatetimePop->Checked = Datetime->Checked;
  if (Datetime->Checked) Options |= DAT;
  else Options &= ~DAT;
 
@@ -735,6 +744,7 @@ void __fastcall TCalcForm::DatetimeClick(TObject *Sender)
 void __fastcall TCalcForm::UnixtimeClick(TObject *Sender)
 {
  Unixtime->Checked ^= 1;
+ UnixtimePop->Checked = Unixtime->Checked;
  if (Unixtime->Checked) Options |= UTM;
  else Options &= ~UTM;
 
@@ -747,6 +757,7 @@ void __fastcall TCalcForm::UnixtimeClick(TObject *Sender)
 void __fastcall TCalcForm::DegreesClick(TObject *Sender)
 {
  Degrees->Checked ^= 1;
+ DegreesPop->Checked = Degrees->Checked;
  if (Degrees->Checked) Options |= DEG;
  else Options &= ~DEG;
 
@@ -759,6 +770,7 @@ void __fastcall TCalcForm::DegreesClick(TObject *Sender)
 void __fastcall TCalcForm::CharClick(TObject *Sender)
 {
  Char->Checked ^= 1;
+ CharPop->Checked = Char->Checked;
  if (Char->Checked) Options |= CHR;
  else Options &= ~CHR;
 
@@ -772,6 +784,7 @@ void __fastcall TCalcForm::CharClick(TObject *Sender)
 void __fastcall TCalcForm::WCharClick(TObject *Sender)
 {
  WChar->Checked ^= 1;
+ WCharPop->Checked = WChar->Checked;
  if (WChar->Checked) Options |= WCH;
  else Options &= ~WCH;
 
@@ -784,6 +797,7 @@ void __fastcall TCalcForm::WCharClick(TObject *Sender)
 void __fastcall TCalcForm::StringClick(TObject *Sender)
 {
  String->Checked ^= 1;
+ StringPop->Checked = String->Checked;
  if (String->Checked) Options |= STR;
  else Options &= ~STR;
 
@@ -796,6 +810,7 @@ void __fastcall TCalcForm::StringClick(TObject *Sender)
 void __fastcall TCalcForm::FractionClick(TObject *Sender)
 {
  Fraction->Checked ^= 1;
+ FractionPop->Checked = Fraction->Checked;
  if (Fraction->Checked) Options |= FRC;
  else Options &= ~FRC;
 
@@ -810,6 +825,7 @@ void __fastcall TCalcForm::InchClick(TObject *Sender)
 {
  int opt = ccalc->issyntax();
  Inch->Checked ^= 1;
+ InchPop->Checked = Inch->Checked;
  if (Inch->Checked)
   {
    Options |= FRI;
@@ -832,25 +848,42 @@ void __fastcall TCalcForm::InchClick(TObject *Sender)
 void __fastcall TCalcForm::AllClick(TObject *Sender)
 {
  All->Checked ^= 1;
+ AllPop->Checked = All->Checked;
  if (All->Checked) Options |= ALL;
  else Options &= ~ALL;
 
  Scientific->Checked = All->Checked;
+ ScientificPop->Checked = All->Checked;
  Normalized->Checked = All->Checked;
+ NormalizedPop->Checked = All->Checked;
  Computing->Checked = All->Checked;
+ ComputingPop->Checked = All->Checked;
  Integer->Checked = All->Checked;
+ IntegerPop->Checked = All->Checked;
  Unsigned->Checked = All->Checked;
+ UnsignedPop->Checked = All->Checked;
  Hex->Checked = All->Checked;
+ HexPop->Checked = All->Checked;
  Char->Checked = All->Checked;
+ CharPop->Checked = All->Checked;
  WChar->Checked = All->Checked;
+ WCharPop->Checked = All->Checked;
  Octal->Checked = All->Checked;
+ OctalPop->Checked = All->Checked;
  Binary->Checked = All->Checked;
+ BinaryPop->Checked = All->Checked;
  Datetime->Checked = All->Checked;
+ DatetimePop->Checked = All->Checked;
  Unixtime->Checked = All->Checked;
+ UnixtimePop->Checked = All->Checked;
  Degrees->Checked = All->Checked;
+ DegreesPop->Checked = All->Checked;
  String->Checked = All->Checked;
+ StringPop->Checked = All->Checked;
  Fraction->Checked = All->Checked;
+ FractionPop->Checked = All->Checked;
  Inch->Checked = All->Checked;
+ InchPop->Checked = All->Checked;
 
  if (Escmin->Checked) Options |= MIN;
  else Options &= ~MIN;
@@ -954,21 +987,37 @@ void __fastcall TCalcForm::Opt2Mnu(void)
 {
  Escmin->Checked = Options & MIN;
  Forcedfloat->Checked = Options & FFLOAT;
+ ScientificPop->Checked = Options & SCI;
  Scientific->Checked = Options & SCI;
+ NormalizedPop->Checked = Options & NRM;
  Normalized->Checked = Options & NRM;
+ ComputingPop->Checked = Options & CMP;
  Computing->Checked = Options & CMP;
+ IntegerPop->Checked = Options & IGR;
  Integer->Checked = Options & IGR;
+ UnsignedPop->Checked = Options & UNS;
  Unsigned->Checked = Options & UNS;
+ HexPop->Checked = Options & HEX;
  Hex->Checked = Options & HEX;
+ OctalPop->Checked = Options & OCT;
  Octal->Checked = Options & OCT;
+ BinaryPop->Checked = Options & fBIN;
  Binary->Checked = Options & fBIN;
+ DatetimePop->Checked = Options & DAT;
  Datetime->Checked = Options & DAT;
+ DegreesPop->Checked = Options & DEG;
  Degrees->Checked = Options & DEG;
+ CharPop->Checked = Options & CHR;
  Char->Checked = Options & CHR;
+ WCharPop->Checked = Options & WCH;
  WChar->Checked = Options & WCH;
+ StringPop->Checked = Options & STR;
  String->Checked = Options & STR;
+ FractionPop->Checked = Options & FRC;
  Fraction->Checked = Options & FRC;
+ InchPop->Checked = Options & FRI;
  Inch->Checked = Options & FRI;
+ TemperaturePop->Checked = Options & FRH;
  Temperature->Checked = Options & FRH;
  if (Options & MNU)
   {
@@ -1008,10 +1057,11 @@ void __fastcall TCalcForm::ImpMulClick(TObject *Sender)
  ImpMul->Checked ^= 1;
  if (ImpMul->Checked) Options |= IMUL;
  else Options &= ~IMUL;
-
+                      
  SetOpt();
  CBStrChange(Sender);
-
+                
 }
 //---------------------------------------------------------------------------
+
 
