@@ -1,5 +1,6 @@
-MAINICON ICON "calc.ico"
-
+//MAINICON ICON "calc.ico"
+// В ccalc.rc
+1 ICON "calc.ico"
 VS_VERSION_INFO     VERSIONINFO
   FILEVERSION       1,0,0,00
   PRODUCTVERSION    1,0,0,00
@@ -10,14 +11,14 @@ VS_VERSION_INFO     VERSIONINFO
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-        BLOCK "040904b0" // Lang=english, CharSet=UCS
+        BLOCK "040904e4" // Lang=english, CharSet=UCS
         BEGIN
-          VALUE "CompanyName", "Metrolight LTD\0"
+          VALUE "CompanyName", "Home\0"
           VALUE "FileDescription", "Scientific formula calculator\0"
           VALUE "FileVersion", "1.00.0000\0"
           VALUE "InternalName", "ccalc\0"
-          VALUE "LegalCopyright", "Metrolight LTD\0"
-          VALUE "LegalTrademarks", "Copyright 2008 Dmitry Orlov.\0"
+          VALUE "LegalCopyright", "Home\0"
+          VALUE "LegalTrademarks", "Copyright 2008, 2026 Dmitry Orlov.\0"
           VALUE "OriginalFilename", "ccalc.exe\0"
           VALUE "ProductName", "Scientific formula calculator\0"
           VALUE "ProductVersion", "1.00.0000\0"

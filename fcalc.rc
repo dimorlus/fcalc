@@ -12,11 +12,11 @@ BEGIN
   BEGIN
         BLOCK "040904b0" // Lang=english, CharSet=UCS
         BEGIN
-          VALUE "CompanyName", "Metrolight LTD\0"
+          VALUE "CompanyName", "Home\0"
           VALUE "FileDescription", "Scientific formula calculator\0"
           VALUE "FileVersion", "1.00.0000\0"
           VALUE "InternalName", "Fcalc\0"
-          VALUE "LegalCopyright", "Metrolight LTD\0"
+          VALUE "LegalCopyright", "Home\0"
           VALUE "LegalTrademarks", "Copyright 2008 Dmitry Orlov.\0"
           VALUE "OriginalFilename", "fcalc.exe\0"
           VALUE "ProductName", "Scientific formula calculator\0"

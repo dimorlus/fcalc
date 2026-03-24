@@ -155,12 +155,6 @@ void __fastcall TCalcForm::FormDestroy(TObject *Sender)
  delete ccalc;
 }
 //---------------------------------------------------------------------------
-void __fastcall TCalcForm::DrawBar(int Color)
-{
- Canvas->Brush->Color = (TColor)Color;
- Canvas->Brush->Style = bsSolid;
- Canvas->FillRect(Rect(0,0,100,100));
-}
 
 void __fastcall TCalcForm::AddHist(void)
 {
@@ -364,11 +358,6 @@ int_t BinWide(int_t d)
  return 0;
 }
 
-int_t color(int_t d)
-{
- CalcForm->DrawBar(d);
- return d;
-}
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 void __fastcall TCalcForm::FormCreate(TObject *Sender)
@@ -439,8 +428,6 @@ void __fastcall TCalcForm::FormCreate(TObject *Sender)
   }
 #endif
  ccalc->addfn("help", (void*)(int_t(*)(int_t))Help);
- ccalc->addfn("color", (void*)(int_t(*)(int_t))color);
-
  ccalc->addfn("menu", (void*)(int_t(*)(int_t))menu);
  ccalc->addfn("vars", (void*)(int_t(*)(int_t))vars);
  ccalc->addfn("opacity", (void*)(int_t(*)(int_t))fOpacity);
@@ -1076,5 +1063,6 @@ void __fastcall TCalcForm::ImpMulClick(TObject *Sender)
                 
 }
 //---------------------------------------------------------------------------
+
 
 

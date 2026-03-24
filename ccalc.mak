@@ -14,25 +14,25 @@ BCB = $(MAKEDIR)\..
 VERSION = BCB.06.00
 # ---------------------------------------------------------------------------
 PROJECT = ccalc.exe
-OBJFILES = ccalc.obj scalc.obj sfmts.obj sfunc.obj help.obj
-RESFILES = ccalc.res
+OBJFILES = ccalc.obj help.obj scalc.obj sfmts.obj sfunc.obj
+RESFILES = ccalc.res ccalc.res
 MAINSOURCE = ccalc.bpf
 RESDEPEN = $(RESFILES)
 LIBFILES = 
 IDLFILES = 
 IDLGENFILES = 
-LIBRARIES = 
-PACKAGES = vcl.bpi rtl.bpi vclx.bpi
-SPARELIBS = 
+LIBRARIES = rtl.lib vcl.lib
+PACKAGES = 
+SPARELIBS = vcl.lib rtl.lib
 DEFFILE = 
 OTHERFILES = 
 # ---------------------------------------------------------------------------
 DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
 USERDEFINES = 
-SYSDEFINES = NO_STRICT;_NO_VCL;_RTLDLL;USEPACKAGES
-INCLUDEPATH = D:\PCProjects\fcalc;$(BCB)\include;$(BCB)\include\vcl
-LIBPATH = D:\PCProjects\fcalc;$(BCB)\lib\obj;$(BCB)\lib
+SYSDEFINES = NO_STRICT;_NO_VCL
+INCLUDEPATH = $(BCB)\include;$(BCB)\include\vcl
+LIBPATH = $(BCB)\lib\obj;$(BCB)\lib
 WARNINGS= -w-par
 PATHCPP = .;
 PATHASM = .;
@@ -40,17 +40,16 @@ PATHPAS = .;
 PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
-CFLAG1 = -O2 -Vx -Ve -X- -a8 -b- -k- -vi -tWC -tWM -c
-IDLCFLAGS = -ID:\PCProjects\fcalc -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix \
-    cpp -boa
+CFLAG1 = -O2 -Vx -Ve -X- -a8 -6 -b- -k- -vi -tWC -tWM- -c
+IDLCFLAGS = -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa
 PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
 RFLAGS = 
 AFLAGS = /mx /w2 /zn
 LFLAGS = -D"" -ap -Tpe -x -Gn
 # ---------------------------------------------------------------------------
-ALLOBJ = c0x32.obj $(PACKAGES) $(OBJFILES)
+ALLOBJ = c0x32.obj $(OBJFILES)
 ALLRES = $(RESFILES)
-ALLLIB = $(LIBFILES) $(LIBRARIES) import32.lib cw32mti.lib
+ALLLIB = $(LIBFILES) $(LIBRARIES) import32.lib cw32.lib
 # ---------------------------------------------------------------------------
 !ifdef IDEOPTIONS
 

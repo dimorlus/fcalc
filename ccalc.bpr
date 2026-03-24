@@ -4,16 +4,16 @@
   <MACROS>
     <VERSION value="BCB.06.00"/>
     <PROJECT value="ccalc.exe"/>
-    <OBJFILES value="ccalc.obj scalc.obj sfmts.obj sfunc.obj help.obj"/>
-    <RESFILES value="ccalc.res"/>
+    <OBJFILES value="ccalc.obj help.obj scalc.obj sfmts.obj sfunc.obj"/>
+    <RESFILES value="ccalc.res ccalc.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
     <DEFFILE value=""/>
     <RESDEPEN value="$(RESFILES)"/>
     <LIBFILES value=""/>
-    <LIBRARIES value=""/>
-    <SPARELIBS value=""/>
-    <PACKAGES value="vcl.bpi rtl.bpi vclx.bpi"/>
+    <LIBRARIES value="rtl.lib vcl.lib"/>
+    <SPARELIBS value="vcl.lib rtl.lib"/>
+    <PACKAGES value=""/>
     <PATHCPP value=".;"/>
     <PATHPAS value=".;"/>
     <PATHRC value=".;"/>
@@ -22,17 +22,16 @@
     <RELEASELIBPATH value="$(BCB)\lib\release"/>
     <LINKER value="ilink32"/>
     <USERDEFINES value=""/>
-    <SYSDEFINES value="NO_STRICT;_NO_VCL;_RTLDLL;USEPACKAGES"/>
+    <SYSDEFINES value="NO_STRICT;_NO_VCL"/>
     <MAINSOURCE value="ccalc.bpf"/>
-    <INCLUDEPATH value="D:\PCProjects\fcalc;$(BCB)\include;$(BCB)\include\vcl"/>
-    <LIBPATH value="D:\PCProjects\fcalc;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <INCLUDEPATH value="$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="$(BCB)\lib\obj;$(BCB)\lib"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
   <OPTIONS>
-    <IDLCFLAGS value="-ID:\PCProjects\fcalc -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix 
-      cpp -boa"/>
-    <CFLAG1 value="-O2 -Vx -Ve -X- -a8 -b- -k- -vi -tWC -tWM -c"/>
+    <IDLCFLAGS value="-I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa"/>
+    <CFLAG1 value="-O2 -Vx -Ve -X- -a8 -6 -b- -k- -vi -tWC -tWM- -c"/>
     <PFLAGS value="-$Y- -$L- -$D- -$A8 -v -JPHNE -M"/>
     <RFLAGS value=""/>
     <AFLAGS value="/mx /w2 /zn"/>
@@ -40,33 +39,34 @@
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
-    <ALLOBJ value="c0x32.obj $(PACKAGES) $(OBJFILES)"/>
+    <ALLOBJ value="c0x32.obj $(OBJFILES)"/>
     <ALLRES value="$(RESFILES)"/>
-    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32mti.lib"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32.lib"/>
     <OTHERFILES value=""/>
   </LINKER>
   <FILELIST>
       <FILE FILENAME="ccalc.res" FORMNAME="" UNITNAME="ccalc.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="ccalc.bpf" FORMNAME="" UNITNAME="ccalc" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="ccalc.cpp" FORMNAME="" UNITNAME="ccalc" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="ccalc.rc" FORMNAME="" UNITNAME="ccalc.rc" CONTAINERID="RCCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="help.cpp" FORMNAME="" UNITNAME="help.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="scalc.cpp" FORMNAME="" UNITNAME="scalc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="sfmts.cpp" FORMNAME="" UNITNAME="sfmts.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="sfunc.cpp" FORMNAME="" UNITNAME="sfunc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="help.cpp" FORMNAME="" UNITNAME="help" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
 
   <IDEOPTIONS>
 [Version Info]
-IncludeVerInfo=1
+IncludeVerInfo=0
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=0
 Build=0
 Debug=0
-PreRelease=0
+PreRelease=1
 Special=0
 Private=0
 DLL=0
@@ -74,18 +74,20 @@ Locale=1033
 CodePage=1252
 
 [Version Info Keys]
-CompanyName=
-FileDescription=
+CompanyName=Metrolight LTD
+FileDescription=Scientific formula calculator
 FileVersion=1.0.0.0
-InternalName=
-LegalCopyright=
-LegalTrademarks=
-OriginalFilename=
-ProductName=
-ProductVersion=1.0.0.0
-Comments=
+InternalName=ccalc
+LegalCopyright=Metrolight LTD
+LegalTrademarks=Copyright 2008 Dmitry Orlov.
+OriginalFilename=ccalc.exe
+ProductName=Scientific formula calculator
+ProductVersion=1.00.0000
+Comments=Scientific formula calculator
+Date=08-14-08. 00:52:02
 
 [Excluded Packages]
+C:\Program Files (x86)\Borland\CBuilder6\Bin\dclstd60.bpl=Borland Standard Components
 C:\Program Files (x86)\Borland\CBuilder6\Bin\dbx60.bpl=Borland SQL Explorer UI Package
 c:\program files (x86)\borland\cbuilder6\Bin\dclado60.bpl=Borland ADO DB Components
 C:\Program Files (x86)\Borland\CBuilder6\Bin\dcldb60.bpl=Borland Database Components
@@ -123,11 +125,29 @@ c:\program files (x86)\borland\cbuilder6\Bin\dclindy60.bpl=Internet Direct (Indy
 c:\program files (x86)\borland\cbuilder6\Bin\bcb2kaxserver60.bpl=Borland C++Builder COM Server Components Sample Package
 c:\program files (x86)\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
 
+[HistoryLists\hlIncludePath]
+Count=2
+Item0=$(BCB)\include;$(BCB)\include\vcl
+Item1=$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=2
+Item0=$(BCB)\lib\obj;$(BCB)\lib
+Item1=$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=1
+Item0=_DEBUG
+
 [Debugging]
 DebugSourceDirs=$(BCB)\source\vcl
 
 [Parameters]
-RunParams=&quot;pi/2&quot;
+RunParams=1+2
 Launcher=
 UseLauncher=0
 DebugCWD=

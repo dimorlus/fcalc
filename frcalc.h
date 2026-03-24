@@ -134,7 +134,6 @@ public:		// User declarations
         int Options;
         int opacity;
         int binwide;
-        void __fastcall DrawBar(int Color);
 
         __fastcall TCalcForm(TComponent* Owner);
 };
