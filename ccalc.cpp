@@ -345,8 +345,6 @@ void load_user_constants (calculator &calc, const char *Fname)
  char exePath[MAX_PATH];
  int lineNum      = 0;
 
- //char* cmd = GetCommandLine();
- //strcpy(exePath, cmd);
  if (GetModuleFileNameA (NULL, exePath, MAX_PATH))
   {
    char *lastSlash = strrchr (exePath, '\\');
@@ -424,6 +422,10 @@ int main ()
   }
 
  // Load configuration
+ //_control87(PC_64, MCW_PC);
+ //_control87(MCW_EM, MCW_EM);
+
+ 
  ccalc_config config (PAS + FFLOAT + NRM + CMP + IGR + UNS + HEX + CHR + FBIN + DAT + DEG
                       + STR + FRC + FRI);
 

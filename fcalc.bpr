@@ -67,10 +67,10 @@
 [Version Info]
 IncludeVerInfo=1
 AutoIncBuild=0
-MajorVer=1
+MajorVer=0
 MinorVer=0
-Release=0
-Build=0
+Release=2
+Build=153
 Debug=0
 PreRelease=1
 Special=0
@@ -80,15 +80,15 @@ Locale=1033
 CodePage=1200
 
 [Version Info Keys]
-CompanyName=Metrolight LTD
-FileDescription=Scientific formula calculator
-FileVersion=1.00.0000
+CompanyName=Home
+FileDescription=Scientific formula calculator GUI
+FileVersion=2.153
 InternalName=Fcalc
-LegalCopyright=Metrolight LTD
+LegalCopyright=Home
 LegalTrademarks=Copyright 2008 Dmitry Orlov.
 OriginalFilename=fcalc.exe
 ProductName=Scientific formula calculator
-ProductVersion=1.00.0000
+ProductVersion=2.153
 Comments=Scientific formula calculator
 Date=08-14-08. 00:52:02
 
@@ -124,11 +124,11 @@ c:\program files (x86)\borland\cbuilder6\Bin\bcbie60.bpl=Borland C++Builder Inte
 c:\program files (x86)\borland\cbuilder6\Bin\dclwebsnap60.bpl=Borland WebSnap Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclsoap60.bpl=Borland SOAP Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclocx60.bpl=Borland Sample Imported ActiveX Controls
-c:\program files (x86)\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
 c:\program files (x86)\borland\cbuilder6\Bin\dcldbx60.bpl=Borland dbExpress Components
 c:\program files (x86)\borland\cbuilder6\Bin\dcldbxcds60.bpl=Borland Local DBX ClientDataset Components
 c:\program files (x86)\borland\cbuilder6\Bin\dclindy60.bpl=Internet Direct (Indy) for D6 Property and Component Editors
 c:\program files (x86)\borland\cbuilder6\Bin\bcb2kaxserver60.bpl=Borland C++Builder COM Server Components Sample Package
+c:\program files (x86)\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
 
 [HistoryLists\hlIncludePath]
 Count=5

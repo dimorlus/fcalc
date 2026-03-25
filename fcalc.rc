@@ -1,7 +1,8 @@
+#include "ver.h"
 MAINICON ICON "calc.ico"
 
 VS_VERSION_INFO     VERSIONINFO
-  FILEVERSION       1,0,0,00
+ FILEVERSION 0,0,2,VER_BUILD
   PRODUCTVERSION    1,0,0,00
   FILEFLAGSMASK     VS_FFI_FILEFLAGSMASK
   FILEFLAGS         VS_FF_PRERELEASE
@@ -13,14 +14,14 @@ BEGIN
         BLOCK "040904b0" // Lang=english, CharSet=UCS
         BEGIN
           VALUE "CompanyName", "Home\0"
-          VALUE "FileDescription", "Scientific formula calculator\0"
-          VALUE "FileVersion", "1.00.0000\0"
+          VALUE "FileDescription", "Scientific formula calculator GUI\0"
+          VALUE "FileVersion", VER_STRING"\0"
           VALUE "InternalName", "Fcalc\0"
           VALUE "LegalCopyright", "Home\0"
           VALUE "LegalTrademarks", "Copyright 2008 Dmitry Orlov.\0"
           VALUE "OriginalFilename", "fcalc.exe\0"
           VALUE "ProductName", "Scientific formula calculator\0"
-          VALUE "ProductVersion", "1.00.0000\0"
+          VALUE "ProductVersion", VER_STRING"\0"
           VALUE "Comments", "Scientific formula calculator\0"
           VALUE "Date", "08-14-08. 00:52:02\0"
         END

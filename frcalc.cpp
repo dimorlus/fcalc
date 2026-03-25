@@ -13,6 +13,7 @@
 #include <math.hpp>
 #include <system.hpp>
 #include <HtmlHelp.h>
+#include <float.h>
 #pragma hdrstop
 
 #include "ViewVars.h"
@@ -56,6 +57,10 @@ __fastcall TCalcForm::TCalcForm(TComponent* Owner)
         : TForm(Owner)
 {
  HelpFile = ExtractFilePath(Application->ExeName) + "fcalc.chm";
+ _control87(MCW_EM, MCW_EM);
+ //_control87(PC_64, MCW_PC);
+ //_control87(MCW_EM, MCW_EM);
+ //_control87(MCW_PC | MCW_EM, MCW_PC | MCW_EM);
 }
 //---------------------------------------------------------------------------
 /*
