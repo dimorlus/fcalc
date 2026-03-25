@@ -21,9 +21,9 @@ RESDEPEN = $(RESFILES)
 LIBFILES = 
 IDLFILES = 
 IDLGENFILES = 
-LIBRARIES = rtl.lib vcl.lib
+LIBRARIES = rtl.lib 
 PACKAGES = 
-SPARELIBS = vcl.lib rtl.lib
+SPARELIBS = rtl.lib
 DEFFILE = 
 OTHERFILES = 
 # ---------------------------------------------------------------------------
@@ -31,7 +31,7 @@ DEBUGLIBPATH = $(BCB)\lib\debug
 RELEASELIBPATH = $(BCB)\lib\release
 USERDEFINES = 
 SYSDEFINES = NO_STRICT;_NO_VCL
-INCLUDEPATH = $(BCB)\include;$(BCB)\include\vcl
+INCLUDEPATH = $(BCB)\include
 LIBPATH = $(BCB)\lib\obj;$(BCB)\lib
 WARNINGS= -w-par
 PATHCPP = .;
@@ -41,7 +41,7 @@ PATHRC = .;
 PATHOBJ = .;$(LIBPATH)
 # ---------------------------------------------------------------------------
 CFLAG1 = -O2 -Vx -Ve -X- -a8 -6 -b- -k- -vi -tWC -tWM- -c
-IDLCFLAGS = -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa
+IDLCFLAGS = -I$(BCB)\include -src_suffix cpp -boa
 PFLAGS = -$Y- -$L- -$D- -$A8 -v -JPHNE -M
 RFLAGS = 
 AFLAGS = /mx /w2 /zn
@@ -77,9 +77,6 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
-
-[Debugging]
-DebugSourceDirs=$(BCB)\source\vcl
 
 !endif
 

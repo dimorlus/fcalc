@@ -70,6 +70,7 @@ static void GetVars(char *Name, float_t fVal)
 }
 */
 //---------------------------------------------------------------------------
+
 //#define USE_calculator_format_out
 void __fastcall TCalcForm::CBStrChange(TObject *Sender)
 {
@@ -299,7 +300,6 @@ void __fastcall TCalcForm::CBStrKeyPress(TObject *Sender, char &Key)
   }
 }
 //---------------------------------------------------------------------------
-
 int_t Help(int_t d)
 {
  Application->HelpCommand(HELP_CONTENTS, 0);

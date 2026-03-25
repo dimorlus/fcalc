@@ -1,5 +1,6 @@
 ::del "Setup\fcalc_setup.exe"
 del *.obj
+del *.res
 del *.dcu
 del *.ddp
 del *.tds
@@ -14,6 +15,7 @@ del *.~ddp
 del *.~dfm
 del *.~h
 del *.~bpr
+del *.~bpf
 del *.~dsk
 del *.~mak
 del *.bak
